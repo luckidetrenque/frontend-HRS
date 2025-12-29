@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, UserCheck, Landmark, CalendarDays, ArrowRight } from "lucide-react";
+import { Users, UserCheck, Landmark, CalendarDays, Calendar, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/Layout";
 
@@ -32,6 +32,13 @@ const modules = [
     href: "/clases",
     color: "bg-info",
   },
+  {
+    title: "Calendario",
+    description: "Vista visual interactiva de todas las clases",
+    icon: Calendar,
+    href: "/calendario",
+    color: "bg-primary",
+  },
 ];
 
 const Index = () => {
@@ -49,7 +56,7 @@ const Index = () => {
       </div>
 
       {/* Module Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {modules.map((module, index) => (
           <Link
             key={module.href}

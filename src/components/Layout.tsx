@@ -21,6 +21,7 @@ const navigation = [
   { name: "Instructores", href: "/instructores", icon: UserCheck },
   { name: "Caballos", href: "/caballos", icon: Landmark },
   { name: "Clases", href: "/clases", icon: CalendarDays },
+  { name: "Calendario", href: "/calendario", icon: CalendarDays },
 ];
 
 export function Layout({ children }: LayoutProps) {

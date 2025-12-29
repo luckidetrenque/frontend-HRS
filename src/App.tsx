@@ -8,6 +8,7 @@ import AlumnosPage from "./pages/Alumnos";
 import InstructoresPage from "./pages/Instructores";
 import CaballosPage from "./pages/Caballos";
 import ClasesPage from "./pages/Clases";
+import CalendarioPage from "./pages/Calendario";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/instructores" element={<InstructoresPage />} />
           <Route path="/caballos" element={<CaballosPage />} />
           <Route path="/clases" element={<ClasesPage />} />
+          <Route path="/calendario" element={<CalendarioPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
