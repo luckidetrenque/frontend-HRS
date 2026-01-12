@@ -48,6 +48,7 @@ import {
   User,
   UserCheck,
   Landmark,
+  ClipboardCopy,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks, isToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -55,20 +56,18 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "default"> = {
-  PENDIENTE: "warning",
-  CONFIRMADA: "info",
-  CANCELADA: "error",
+  PROGRAMADA: "warning",
+  EN_CURSO: "info",
   COMPLETADA: "success",
+  CANCELADA: "error",
+  ACA: "info",
+  ASA: "info",
 };
 
-const especialidades = [
-  "Salto",
-  "Doma",
-  "Polo",
-  "Paseo",
-  "Principiante",
-  "Intermedio",
-  "Avanzado",
+const especialidad = [
+    "EQUINOTERAPIA",
+    "EQUITACION",
+    "ADIESTRAMIENTO",
 ];
 
 type ViewMode = "month" | "week";
@@ -83,7 +82,7 @@ export default function CalendarioPage() {
 
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
-    queryFn: clasesApi.listar,
+    queryFn: clasesApi.listarDetalladas,
   });
 
   const { data: alumnos = [] } = useQuery({
@@ -109,7 +108,7 @@ export default function CalendarioPage() {
       setSelectedDate(null);
       toast.success("Clase creada correctamente");
     },
-    onError: () => toast.error("Error al crear la clase"),
+    onError: (error: Error) => toast.error(error.message || "Error al crear la clase"),
   });
 
   const updateMutation = useMutation({
@@ -120,7 +119,19 @@ export default function CalendarioPage() {
       setSelectedClase(null);
       toast.success("Clase actualizada correctamente");
     },
-    onError: () => toast.error("Error al actualizar la clase"),
+    onError: (error: Error) => toast.error(error.message || "Error al actualizar la clase"),
+  });
+
+  const copyWeekMutation = useMutation({
+    mutationFn: () => {
+      const semanaInicio = format(startOfWeek(currentDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
+      return clasesApi.copiarSemana({ fechaInicio: semanaInicio });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      toast.success("Semana copiada correctamente");
+    },
+    onError: (error: Error) => toast.error(error.message || "Error al copiar la semana"),
   });
 
   // Generate days for the calendar view
@@ -140,13 +151,13 @@ export default function CalendarioPage() {
   const clasesByDate = useMemo(() => {
     const grouped: Record<string, Clase[]> = {};
     clases.forEach((clase: Clase) => {
-      const dateKey = clase.fecha;
+      const dateKey = clase.dia;
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(clase);
     });
     // Sort by time
     Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+      grouped[key].sort((a, b) => a.hora .localeCompare(b.hora ));
     });
     return grouped;
   }, [clases]);
@@ -161,9 +172,17 @@ export default function CalendarioPage() {
 
   const goToToday = () => setCurrentDate(new Date());
 
-  const getAlumnoNombre = (id: number) => {
+  const getAlumnoNombreCompleto = (id: number) => {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
+  };
+  const getAlumnoNombre = (id: number) => {
+    const alumno = alumnos.find((a: Alumno) => a.id === id);
+    return alumno ? `${alumno.nombre}` : "-";
+  };
+  const getAlumnoApellido = (id: number) => {
+    const alumno = alumnos.find((a: Alumno) => a.id === id);
+    return alumno ? `${alumno.apellido}` : "-";
   };
 
   const getInstructorNombre = (id: number) => {
@@ -188,11 +207,10 @@ export default function CalendarioPage() {
       alumnoId: Number(formData.get("alumnoId")),
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
-      especialidad: formData.get("especialidad") as string,
-      fecha: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
-      horaInicio: formData.get("horaInicio") as string,
-      duracion: 60,
-      estado: "PENDIENTE" as const,
+      especialidad: formData.get("especialidad") as "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION",
+      dia: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+      hora : formData.get("hora ") as string,
+      estado: "PROGRAMADA" as const,
     };
     createMutation.mutate(data);
   };
@@ -223,6 +241,7 @@ export default function CalendarioPage() {
           <h2 className="ml-4 font-display text-xl font-semibold capitalize">
             {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Semana del' d 'de' MMMM", { locale: es })}
           </h2>
+          
         </div>
 
         <div className="flex items-center gap-2">
@@ -239,6 +258,15 @@ export default function CalendarioPage() {
             onClick={() => setViewMode("week")}
           >
             Semana
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => copyWeekMutation.mutate()}
+            disabled={copyWeekMutation.isPending}
+          >
+            <ClipboardCopy />
+            Copiar Semana
           </Button>
         </div>
       </div>
@@ -306,13 +334,17 @@ export default function CalendarioPage() {
                             className={cn(
                               "w-full rounded-md px-2 py-1 text-left text-xs transition-colors",
                               clase.estado === "COMPLETADA" && "bg-success/20 text-success hover:bg-success/30",
-                              clase.estado === "CONFIRMADA" && "bg-info/20 text-info hover:bg-info/30",
-                              clase.estado === "PENDIENTE" && "bg-warning/20 text-warning hover:bg-warning/30",
-                              clase.estado === "CANCELADA" && "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                              clase.estado === "EN_CURSO" && "bg-info/20 text-info hover:bg-info/30",
+                              clase.estado === "PROGRAMADA" && "bg-warning/20 text-warning hover:bg-warning/30",
+                              clase.estado === "CANCELADA" && "bg-destructive/20 text-destructive hover:bg-destructive/30",
+                              clase.estado === "ACA" && "bg-destructive/20 text-destructive hover:bg-destructive/30",
+                              clase.estado === "ASA" && "bg-destructive/20 text-destructive hover:bg-destructive/30"
                             )}
                           >
-                            <span className="font-medium">{clase.horaInicio.slice(0, 5)}</span>
-                            <span className="ml-1 truncate">{getAlumnoNombre(clase.alumnoId).split(" ")[0]}</span>
+                            <span className="font-medium">{clase.hora .slice(0, 5)}</span>
+                            <span className="ml-1 truncate">{getAlumnoApellido(clase.alumnoId).split(" ")[0]}</span>
+                            <span> /</span>
+                            <span className="ml-1 truncate">{getCaballoNombre(clase.caballoId).split(" ")[0]}</span>
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 p-0" align="start">
@@ -326,7 +358,7 @@ export default function CalendarioPage() {
                             <div className="space-y-2 text-sm">
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span>{clase.horaInicio} - {clase.duracion} min</span>
+                                <span>{clase.hora.split(":").slice(0, 2).join(":") }</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground" />
@@ -350,7 +382,7 @@ export default function CalendarioPage() {
                                 Cambiar Estado
                               </Label>
                               <div className="flex flex-wrap gap-1">
-                                {(["PENDIENTE", "CONFIRMADA", "COMPLETADA", "CANCELADA"] as const).map((estado) => (
+                                {(["PROGRAMADA" , "EN_CURSO" , "COMPLETADA" , "CANCELADA" , "ACA" , "ASA"] as const).map((estado) => (
                                   <Button
                                     key={estado}
                                     variant={clase.estado === estado ? "default" : "outline"}
@@ -384,11 +416,11 @@ export default function CalendarioPage() {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-warning/50" />
-          <span className="text-sm text-muted-foreground">Pendiente</span>
+          <span className="text-sm text-muted-foreground">Programada</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-info/50" />
-          <span className="text-sm text-muted-foreground">Confirmada</span>
+          <span className="text-sm text-muted-foreground">En Curso</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-success/50" />
@@ -397,6 +429,14 @@ export default function CalendarioPage() {
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-destructive/50" />
           <span className="text-sm text-muted-foreground">Cancelada</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-info/50" />
+          <span className="text-sm text-muted-foreground">ACA</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-info/50" />
+          <span className="text-sm text-muted-foreground">ASA</span>
         </div>
       </div>
 
@@ -417,10 +457,10 @@ export default function CalendarioPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="horaInicio">Hora de Inicio</Label>
+                <Label htmlFor="hora ">Hora de Inicio</Label>
                 <Input
-                  id="horaInicio"
-                  name="horaInicio"
+                  id="hora "
+                  name="hora "
                   type="time"
                   defaultValue="09:00"
                   required
@@ -469,7 +509,7 @@ export default function CalendarioPage() {
                       .filter((c: Caballo) => c.disponible)
                       .map((caballo: Caballo) => (
                         <SelectItem key={caballo.id} value={String(caballo.id)}>
-                          {caballo.nombre} ({caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"})
+                          {caballo.nombre} ({caballo.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"})
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -482,7 +522,7 @@ export default function CalendarioPage() {
                     <SelectValue placeholder="Seleccionar especialidad" />
                   </SelectTrigger>
                   <SelectContent>
-                    {especialidades.map((esp) => (
+                    {especialidad.map((esp) => (
                       <SelectItem key={esp} value={esp}>
                         {esp}
                       </SelectItem>

@@ -7,11 +7,13 @@ export interface Alumno {
   dni: string;
   nombre: string;
   apellido: string;
+  fechaNacimiento: string;
   telefono: string;
   email: string;
   fechaInscripcion: string;
   cantidadClases: number;
-  tieneCaballoPropio: boolean;
+  propietario: boolean;
+  activo: boolean;
 }
 
 export interface Instructor {
@@ -19,6 +21,7 @@ export interface Instructor {
   dni: string;
   nombre: string;
   apellido: string;
+  fechaNacimiento: string;
   telefono: string;
   email: string;
   activo: boolean;
@@ -27,21 +30,27 @@ export interface Instructor {
 export interface Caballo {
   id: number;
   nombre: string;
-  tipo: "ESCUELA" | "PRIVADO";
+  tipoCaballo: "ESCUELA" | "PRIVADO";
   disponible: boolean;
   alumnoId?: number;
 }
 
 export interface Clase {
   id: number;
+  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION";
+  dia: string;
+  hora: string;
+  estado:
+      "PROGRAMADA"
+    | "EN_CURSO"
+    | "COMPLETADA"
+    | "CANCELADA"
+    | "ACA"
+    | "ASA";
+  observaciones?: string;
   alumnoId: number;
   instructorId: number;
   caballoId: number;
-  especialidad: string;
-  fecha: string;
-  horaInicio: string;
-  duracion: number;
-  estado: "PENDIENTE" | "CONFIRMADA" | "CANCELADA" | "COMPLETADA";
 }
 
 export interface ClaseDetallada extends Clase {
@@ -53,10 +62,24 @@ export interface ClaseDetallada extends Clase {
 // API Functions
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `Error: ${response.status}`);
+    // Intentamos leer el JSON del error
+    const errorData = await response.json().catch(() => ({}));
+    if (errorData.errores) {
+      throw new Error(
+        Object.keys(errorData.errores)
+          .map((campo) => `${errorData.errores[campo]}`)
+          .join("\n")
+      );
+    } else {
+      // Extraemos el mensaje específico del backend o usamos un fallback
+      const errorMessage =
+        errorData.mensaje ||
+        errorData.error ||
+        `Error ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
   }
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 // Alumnos
@@ -111,7 +134,10 @@ export const instructoresApi = {
     });
     return handleResponse<Instructor>(response);
   },
-  actualizar: async (id: number, instructor: Partial<Instructor>): Promise<Instructor> => {
+  actualizar: async (
+    id: number,
+    instructor: Partial<Instructor>
+  ): Promise<Instructor> => {
     const response = await fetch(`${API_BASE_URL}/instructores/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -145,7 +171,10 @@ export const caballosApi = {
     });
     return handleResponse<Caballo>(response);
   },
-  actualizar: async (id: number, caballo: Partial<Caballo>): Promise<Caballo> => {
+  actualizar: async (
+    id: number,
+    caballo: Partial<Caballo>
+  ): Promise<Caballo> => {
     const response = await fetch(`${API_BASE_URL}/caballos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -168,7 +197,7 @@ export const clasesApi = {
     return handleResponse<Clase[]>(response);
   },
   listarDetalladas: async (): Promise<ClaseDetallada[]> => {
-    const response = await fetch(`${API_BASE_URL}/clases/detalle`);
+    const response = await fetch(`${API_BASE_URL}/clases/detalles`);
     return handleResponse<ClaseDetallada[]>(response);
   },
   obtener: async (id: number): Promise<Clase> => {
@@ -197,12 +226,23 @@ export const clasesApi = {
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
-  cambiarEstado: async (id: number, estado: Clase["estado"]): Promise<Clase> => {
+  cambiarEstado: async (
+    id: number,
+    estado: Clase["estado"]
+  ): Promise<Clase> => {
     const response = await fetch(`${API_BASE_URL}/clases/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado }),
     });
     return handleResponse<Clase>(response);
+  },
+  copiarSemana: async (payload?: unknown): Promise<unknown> => {
+    const response = await fetch(`${API_BASE_URL}/calendario/copiar-semana`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+    return handleResponse<unknown>(response);
   },
 };

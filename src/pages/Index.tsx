@@ -99,7 +99,7 @@ const Index = () => {
               Este frontend está conectado a una API REST desarrollada en Java Spring Boot.
               Asegúrate de que el servidor esté ejecutándose en{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
-                http://localhost:8080
+                http://localhost:5173
               </code>
             </p>
           </div>

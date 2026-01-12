@@ -45,7 +45,7 @@ export default function AlumnosPage() {
       setIsOpen(false);
       toast.success("Alumno creado correctamente");
     },
-    onError: () => toast.error("Error al crear el alumno"),
+    onError: (error: Error) => toast.error(error.message ||"Error al crear el alumno"),
   });
 
   const updateMutation = useMutation({
@@ -57,7 +57,7 @@ export default function AlumnosPage() {
       setEditingAlumno(null);
       toast.success("Alumno actualizado correctamente");
     },
-    onError: () => toast.error("Error al actualizar el alumno"),
+    onError: (error: Error) => toast.error(error.message ||"Error al actualizar el alumno"),
   });
 
   const deleteMutation = useMutation({
@@ -66,7 +66,7 @@ export default function AlumnosPage() {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
       toast.success("Alumno eliminado correctamente");
     },
-    onError: () => toast.error("Error al eliminar el alumno"),
+    onError: (error: Error) => toast.error(error.message || "Error al eliminar el alumno"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,11 +76,13 @@ export default function AlumnosPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
+      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string).toISOString().split("T")[0],
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
+      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string).toISOString().split("T")[0],
       cantidadClases: Number(formData.get("cantidadClases")),
-      tieneCaballoPropio: formData.get("tieneCaballoPropio") === "on",
-      fechaInscripcion: new Date().toISOString().split("T")[0],
+      propietario: formData.get("propietario") === "on",
+      activo: formData.get("activo") === "on",
     };
 
     if (editingAlumno) {
@@ -91,13 +93,20 @@ export default function AlumnosPage() {
   };
 
   const columns = [
-    { header: "DNI", accessorKey: "dni" as keyof Alumno },
     {
-      header: "Nombre",
+      header: "Nombre y Apellido",
       cell: (row: Alumno) => `${row.nombre} ${row.apellido}`,
     },
-    { header: "Email", accessorKey: "email" as keyof Alumno },
+    { header: "DNI", accessorKey: "dni" as keyof Alumno },
     { header: "Teléfono", accessorKey: "telefono" as keyof Alumno },
+    { header: "Email", accessorKey: "email" as keyof Alumno },
+    {
+      header: "Inscripción",
+      cell: (row: Alumno) =>
+        `${row.fechaInscripcion.split("-")[2]}/${
+          row.fechaInscripcion.split("-")[1]
+        }/${row.fechaInscripcion.split("-")[0]}`,
+    },
     {
       header: "Clases/Mes",
       cell: (row: Alumno) => (
@@ -105,10 +114,18 @@ export default function AlumnosPage() {
       ),
     },
     {
-      header: "Caballo Propio",
+      header: "Estado",
       cell: (row: Alumno) => (
-        <StatusBadge status={row.tieneCaballoPropio ? "success" : "default"}>
-          {row.tieneCaballoPropio ? "Sí" : "No"}
+        <StatusBadge status={row.activo ? "success" : "default"}>
+          {row.activo ? "Activo" : "Inactivo"}
+        </StatusBadge>
+      ),
+    },
+    {
+      header: "Propietario",
+      cell: (row: Alumno) => (
+        <StatusBadge status={row.propietario ? "success" : "default"}>
+          {row.propietario ? "Sí" : "No"}
         </StatusBadge>
       ),
     },
@@ -178,30 +195,11 @@ export default function AlumnosPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="dni">DNI</Label>
-                      <Input
-                        id="dni"
-                        name="dni"
-                        defaultValue={editingAlumno?.dni}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="telefono">Teléfono</Label>
-                      <Input
-                        id="telefono"
-                        name="telefono"
-                        defaultValue={editingAlumno?.telefono}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
                       <Label htmlFor="nombre">Nombre</Label>
                       <Input
                         id="nombre"
                         name="nombre"
+                        type="text"
                         defaultValue={editingAlumno?.nombre}
                         required
                       />
@@ -211,51 +209,107 @@ export default function AlumnosPage() {
                       <Input
                         id="apellido"
                         name="apellido"
+                        type="text"
                         defaultValue={editingAlumno?.apellido}
                         required
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      defaultValue={editingAlumno?.email}
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dni">DNI</Label>
+                      <Input
+                        id="dni"
+                        name="dni"
+                        type="number"
+                        defaultValue={editingAlumno?.dni}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fechaNacimiento">
+                        Fecha de Nacimiento
+                      </Label>
+                      <Input
+                        id="fechaNacimiento"
+                        name="fechaNacimiento"
+                        type="date"
+                        defaultValue={editingAlumno?.fechaNacimiento}
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cantidadClases">Clases por Mes</Label>
-                    <Select
-                      name="cantidadClases"
-                      defaultValue={String(editingAlumno?.cantidadClases || 4)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="4">4 clases</SelectItem>
-                        <SelectItem value="8">8 clases</SelectItem>
-                        <SelectItem value="12">12 clases</SelectItem>
-                        <SelectItem value="16">16 clases</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="telefono">Teléfono</Label>
+                      <Input
+                        id="telefono"
+                        name="telefono"
+                        type="number"
+                        defaultValue={editingAlumno?.telefono}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        defaultValue={editingAlumno?.email}
+                      />
+                    </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fechaInscripcion">
+                        Fecha de Inscripcion
+                      </Label>
+                      <Input
+                        id="fechaInscripcion"
+                        name="fechaInscripcion"
+                        type="date"
+                        defaultValue={editingAlumno?.fechaInscripcion||new Date().toISOString().split("T")[0]}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cantidadClases">Clases por Mes</Label>
+                      <Select
+                        name="cantidadClases"
+                        defaultValue={String(
+                          editingAlumno?.cantidadClases || 4
+                        )}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="4">4 clases</SelectItem>
+                          <SelectItem value="8">8 clases</SelectItem>
+                          <SelectItem value="12">12 clases</SelectItem>
+                          <SelectItem value="16">16 clases</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-3">
                     <Switch
-                      id="tieneCaballoPropio"
-                      name="tieneCaballoPropio"
-                      defaultChecked={editingAlumno?.tieneCaballoPropio}
+                      id="propietario"
+                      name="propietario"
+                      defaultChecked={editingAlumno?.propietario}
                     />
-                    <Label htmlFor="tieneCaballoPropio">
-                      Tiene caballo propio
-                    </Label>
+                    <Label htmlFor="propietario">Tiene caballo propio</Label>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
+                  >
                     {editingAlumno ? "Guardar Cambios" : "Crear Alumno"}
                   </Button>
                 </DialogFooter>

@@ -45,7 +45,7 @@ export default function CaballosPage() {
       setIsOpen(false);
       toast.success("Caballo creado correctamente");
     },
-    onError: () => toast.error("Error al crear el caballo"),
+    onError: (error: Error) => toast.error(error.message || "Error al crear el caballo"),
   });
 
   const updateMutation = useMutation({
@@ -57,7 +57,7 @@ export default function CaballosPage() {
       setEditingCaballo(null);
       toast.success("Caballo actualizado correctamente");
     },
-    onError: () => toast.error("Error al actualizar el caballo"),
+    onError: (error: Error) => toast.error(error.message || "Error al actualizar el caballo"),
   });
 
   const deleteMutation = useMutation({
@@ -66,7 +66,7 @@ export default function CaballosPage() {
       queryClient.invalidateQueries({ queryKey: ["caballos"] });
       toast.success("Caballo eliminado correctamente");
     },
-    onError: () => toast.error("Error al eliminar el caballo"),
+    onError: (error: Error) => toast.error(error.message || "Error al eliminar el caballo"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -74,7 +74,7 @@ export default function CaballosPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       nombre: formData.get("nombre") as string,
-      tipo: formData.get("tipo") as "ESCUELA" | "PRIVADO",
+      tipoCaballo: formData.get("tipoCaballo") as "ESCUELA" | "PRIVADO",
       disponible: formData.get("disponible") === "on",
     };
 
@@ -90,15 +90,15 @@ export default function CaballosPage() {
     {
       header: "Tipo",
       cell: (row: Caballo) => (
-        <StatusBadge status={row.tipo === "ESCUELA" ? "info" : "warning"}>
-          {row.tipo === "ESCUELA" ? "Escuela" : "Privado"}
+        <StatusBadge status={row.tipoCaballo === "ESCUELA" ? "info" : "warning"}>
+          {row.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"}
         </StatusBadge>
       ),
     },
     {
       header: "Disponibilidad",
       cell: (row: Caballo) => (
-        <StatusBadge status={row.disponible ? "success" : "error"}>
+        <StatusBadge status={row.disponible ? "success" : "default"}>
           {row.disponible ? "Disponible" : "No Disponible"}
         </StatusBadge>
       ),
@@ -177,16 +177,16 @@ export default function CaballosPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tipo">Tipo</Label>
+                    <Label htmlFor="tipoCaballo">Tipo</Label>
                     <Select
-                      name="tipo"
-                      defaultValue={editingCaballo?.tipo || "ESCUELA"}
+                      name="tipoCaballo"
+                      defaultValue={editingCaballo?.tipoCaballo || "ESCUELA"}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ESCUELA">De la Escuela</SelectItem>
+                        <SelectItem value="ESCUELA">Escuela</SelectItem>
                         <SelectItem value="PRIVADO">Privado</SelectItem>
                       </SelectContent>
                     </Select>

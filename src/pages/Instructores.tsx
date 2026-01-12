@@ -38,7 +38,7 @@ export default function InstructoresPage() {
       setIsOpen(false);
       toast.success("Instructor creado correctamente");
     },
-    onError: () => toast.error("Error al crear el instructor"),
+    onError: (error: Error) => toast.error(error.message || "Error al crear el instructor"),
   });
 
   const updateMutation = useMutation({
@@ -50,7 +50,7 @@ export default function InstructoresPage() {
       setEditingInstructor(null);
       toast.success("Instructor actualizado correctamente");
     },
-    onError: () => toast.error("Error al actualizar el instructor"),
+    onError: (error: Error) => toast.error(error.message || "Error al actualizar el instructor"),
   });
 
   const deleteMutation = useMutation({
@@ -59,7 +59,7 @@ export default function InstructoresPage() {
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
       toast.success("Instructor eliminado correctamente");
     },
-    onError: () => toast.error("Error al eliminar el instructor"),
+    onError: (error: Error) => toast.error(error.message || "Error al eliminar el instructor"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -69,6 +69,7 @@ export default function InstructoresPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
+      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string).toISOString().split("T")[0],
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
       activo: formData.get("activo") === "on",
@@ -82,17 +83,17 @@ export default function InstructoresPage() {
   };
 
   const columns = [
-    { header: "DNI", accessorKey: "dni" as keyof Instructor },
     {
-      header: "Nombre",
+      header: "Nombre y Apellido",
       cell: (row: Instructor) => `${row.nombre} ${row.apellido}`,
     },
-    { header: "Email", accessorKey: "email" as keyof Instructor },
+    { header: "DNI", accessorKey: "dni" as keyof Instructor },
     { header: "Teléfono", accessorKey: "telefono" as keyof Instructor },
+    { header: "Email", accessorKey: "email" as keyof Instructor },
     {
       header: "Estado",
       cell: (row: Instructor) => (
-        <StatusBadge status={row.activo ? "success" : "error"}>
+        <StatusBadge status={row.activo ? "success" : "default"}>
           {row.activo ? "Activo" : "Inactivo"}
         </StatusBadge>
       ),
@@ -161,27 +162,7 @@ export default function InstructoresPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dni">DNI</Label>
-                      <Input
-                        id="dni"
-                        name="dni"
-                        defaultValue={editingInstructor?.dni}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="telefono">Teléfono</Label>
-                      <Input
-                        id="telefono"
-                        name="telefono"
-                        defaultValue={editingInstructor?.telefono}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="nombre">Nombre</Label>
                       <Input
@@ -198,6 +179,51 @@ export default function InstructoresPage() {
                         name="apellido"
                         defaultValue={editingInstructor?.apellido}
                         required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dni">DNI</Label>
+                      <Input
+                        id="dni"
+                        name="dni"
+                        type="number"
+                        defaultValue={editingInstructor?.dni}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fechaNacimiento">
+                        Fecha de Nacimiento
+                      </Label>
+                      <Input
+                        id="fechaNacimiento"
+                        name="fechaNacimiento"
+                        type="date"
+                        defaultValue={editingInstructor?.fechaNacimiento}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="telefono">Teléfono</Label>
+                      <Input
+                        id="telefono"
+                        name="telefono"
+                        type="number"
+                        defaultValue={editingInstructor?.telefono}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        defaultValue={editingInstructor?.email}
                       />
                     </div>
                   </div>

@@ -37,20 +37,18 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "default"> = {
-  PENDIENTE: "warning",
-  CONFIRMADA: "info",
-  CANCELADA: "error",
+  PROGRAMADA: "warning",
+  EN_CURSO: "info",
   COMPLETADA: "success",
+  CANCELADA: "error",
+  ACA: "info",
+  ASA: "info",
 };
 
-const especialidades = [
-  "Salto",
-  "Doma",
-  "Polo",
-  "Paseo",
-  "Principiante",
-  "Intermedio",
-  "Avanzado",
+const especialidad = [
+    "EQUINOTERAPIA",
+    "EQUITACION",
+    "ADIESTRAMIENTO",
 ];
 
 export default function ClasesPage() {
@@ -60,7 +58,7 @@ export default function ClasesPage() {
 
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
-    queryFn: clasesApi.listar,
+    queryFn: clasesApi.listarDetalladas,
   });
 
   const { data: alumnos = [] } = useQuery({
@@ -85,7 +83,7 @@ export default function ClasesPage() {
       setIsOpen(false);
       toast.success("Clase creada correctamente");
     },
-    onError: () => toast.error("Error al crear la clase"),
+    onError: (error: Error) => toast.error(error.message ||"Error al crear la clase"),
   });
 
   const updateMutation = useMutation({
@@ -97,7 +95,7 @@ export default function ClasesPage() {
       setEditingClase(null);
       toast.success("Clase actualizada correctamente");
     },
-    onError: () => toast.error("Error al actualizar la clase"),
+    onError: (error: Error) => toast.error(error.message ||"Error al actualizar la clase"),
   });
 
   const deleteMutation = useMutation({
@@ -106,21 +104,22 @@ export default function ClasesPage() {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       toast.success("Clase eliminada correctamente");
     },
-    onError: () => toast.error("Error al eliminar la clase"),
+    onError: (error: Error) => toast.error(error.message ||"Error al eliminar la clase"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
+      especialidad: formData.get("especialidad") as "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION",
+      dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
+      hora: new Date(`1970-01-01T${formData.get("hora") as string}`).toISOString().split("T")[1].substring(0,5),
+      duracion: 60,
+      estado: formData.get("estado") as "PROGRAMADA" | "EN_CURSO" | "COMPLETADA" | "CANCELADA" | "ACA" | "ASA",
+      observaciones: "",
       alumnoId: Number(formData.get("alumnoId")),
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
-      especialidad: formData.get("especialidad") as string,
-      fecha: formData.get("fecha") as string,
-      horaInicio: formData.get("horaInicio") as string,
-      duracion: 60,
-      estado: (formData.get("estado") as Clase["estado"]) || "PENDIENTE",
     };
 
     if (editingClase) {
@@ -147,10 +146,16 @@ export default function ClasesPage() {
 
   const columns = [
     {
-      header: "Fecha",
-      cell: (row: Clase) => new Date(row.fecha).toLocaleDateString("es-AR"),
+      header: "Dia",
+      cell: (row: Clase) =>
+        `${row.dia.split("-")[2]}/${
+          row.dia.split("-")[1]
+        }/${row.dia.split("-")[0]}`,
     },
-    { header: "Hora", accessorKey: "horaInicio" as keyof Clase },
+        {
+      header: "Hora",
+      cell: (row: Clase) => row.hora.split(":").slice(0, 2).join(":"),
+    },
     {
       header: "Alumno",
       cell: (row: Clase) => getAlumnoNombre(row.alumnoId),
@@ -238,22 +243,22 @@ export default function ClasesPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fecha">Fecha</Label>
+                      <Label htmlFor="dia">Dia</Label>
                       <Input
-                        id="fecha"
-                        name="fecha"
+                        id="dia"
+                        name="dia"
                         type="date"
-                        defaultValue={editingClase?.fecha}
+                        defaultValue={editingClase?.dia}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="horaInicio">Hora de Inicio</Label>
+                      <Label htmlFor="hora">Hora</Label>
                       <Input
-                        id="horaInicio"
-                        name="horaInicio"
+                        id="hora"
+                        name="hora"
                         type="time"
-                        defaultValue={editingClase?.horaInicio}
+                        defaultValue={editingClase?.hora}
                         required
                       />
                     </div>
@@ -310,7 +315,7 @@ export default function ClasesPage() {
                           .filter((c: Caballo) => c.disponible)
                           .map((caballo: Caballo) => (
                             <SelectItem key={caballo.id} value={String(caballo.id)}>
-                              {caballo.nombre} ({caballo.tipo === "ESCUELA" ? "Escuela" : "Privado"})
+                              {caballo.nombre} ({caballo.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"})
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -326,7 +331,7 @@ export default function ClasesPage() {
                         <SelectValue placeholder="Seleccionar especialidad" />
                       </SelectTrigger>
                       <SelectContent>
-                        {especialidades.map((esp) => (
+                        {especialidad.map((esp) => (
                           <SelectItem key={esp} value={esp}>
                             {esp}
                           </SelectItem>
@@ -342,10 +347,12 @@ export default function ClasesPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="PENDIENTE">Pendiente</SelectItem>
-                          <SelectItem value="CONFIRMADA">Confirmada</SelectItem>
-                          <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                          <SelectItem value="PROGRAMADA">Programada</SelectItem>
+                          <SelectItem value="EN_CURSO">En Curso</SelectItem>
                           <SelectItem value="COMPLETADA">Completada</SelectItem>
+                          <SelectItem value="CANCELADA">Cancelada</SelectItem>
+                          <SelectItem value="ACA">ACA</SelectItem>
+                          <SelectItem value="ASA">ASA</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
