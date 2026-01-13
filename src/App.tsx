@@ -3,40 +3,50 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
-import AlumnosPage from "./pages/Alumnos";
-import InstructoresPage from "./pages/Instructores";
-import CaballosPage from "./pages/Caballos";
-import ClasesPage from "./pages/Clases";
-import CalendarioPage from "./pages/Calendario";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import AlumnosPage from "./pages/Alumnos";
+import CaballosPage from "./pages/Caballos";
+import CalendarioPage from "./pages/Calendario";
+import ClasesPage from "./pages/Clases";
+import InstructoresPage from "./pages/Instructores";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner position="top-right" />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/alumnos" element={<AlumnosPage />} />
-          <Route path="/instructores" element={<InstructoresPage />} />
-          <Route path="/caballos" element={<CaballosPage />} />
-          <Route path="/clases" element={<ClasesPage />} />
-          <Route path="/calendario" element={<CalendarioPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/alumnos" element={<ProtectedRoute><AlumnosPage /></ProtectedRoute>} />
+            <Route path="/caballos" element={<ProtectedRoute><CaballosPage /></ProtectedRoute>} />
+            <Route path="/instructores" element={<ProtectedRoute><InstructoresPage /></ProtectedRoute>} />
+            <Route path="/clases" element={<ProtectedRoute><ClasesPage /></ProtectedRoute>} />
+            <Route path="/calendario" element={<ProtectedRoute><CalendarioPage /></ProtectedRoute>} />
+
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

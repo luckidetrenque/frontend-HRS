@@ -8,6 +8,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { addDays, subDays } from "date-fns";
+import { DayView } from "@/components/calendar/DayView";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +72,7 @@ const especialidad = [
     "ADIESTRAMIENTO",
 ];
 
-type ViewMode = "month" | "week";
+type ViewMode = "month" | "week" | "day";
 
 export default function CalendarioPage() {
   const queryClient = useQueryClient();
@@ -79,6 +81,8 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClase, setSelectedClase] = useState<Clase | null>(null);
+  const [prefilledCaballoId, setPrefilledCaballoId] = useState<number | null>(null);
+const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
 
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
@@ -165,12 +169,25 @@ export default function CalendarioPage() {
   const navigate = (direction: "prev" | "next") => {
     if (viewMode === "month") {
       setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
-    } else {
+    } else if (viewMode === "week") {
       setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
+    } else {
+      // Vista de día
+      setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
     }
   };
 
   const goToToday = () => setCurrentDate(new Date());
+
+  const getViewTitle = () => {
+    if (viewMode === "month") {
+      return format(currentDate, "MMMM yyyy", { locale: es });
+    } else if (viewMode === "week") {
+      return format(currentDate, "'Semana del' d 'de' MMMM", { locale: es });
+    } else {
+      return format(currentDate, "EEEE d 'de' MMMM 'de' yyyy", { locale: es });
+    }
+  };
 
   const getAlumnoNombreCompleto = (id: number) => {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
@@ -199,6 +216,13 @@ export default function CalendarioPage() {
     setSelectedDate(date);
     setIsOpen(true);
   };
+
+  const handleDayViewCellClick = (caballo: Caballo, hora: string) => {
+  setSelectedDate(currentDate);
+  setPrefilledCaballoId(caballo.id);
+  setPrefilledHora(hora);
+  setIsOpen(true);
+};
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -259,12 +283,20 @@ export default function CalendarioPage() {
           >
             Semana
           </Button>
+            <Button
+    variant={viewMode === "day" ? "default" : "outline"}
+    size="sm"
+    onClick={() => setViewMode("day")}
+    >
+    Día
+    </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => copyWeekMutation.mutate()}
             disabled={copyWeekMutation.isPending}
-          >
+          >            
             <ClipboardCopy />
             Copiar Semana
           </Button>
@@ -272,6 +304,29 @@ export default function CalendarioPage() {
       </div>
 
       {/* Calendar Grid */}
+{viewMode === "day" ? (
+  <Card className="overflow-hidden">
+    <CardHeader className="border-b bg-secondary/30 py-3">
+      <CardTitle className="text-base font-medium">
+        {format(currentDate, "EEEE d 'de' MMMM", { locale: es })} — 
+        <span className="ml-2 text-muted-foreground">
+          {clases.filter((c: Clase) => c.dia === format(currentDate, "yyyy-MM-dd")).length} clases
+        </span>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="p-0">
+      <DayView
+        selectedDate={currentDate}
+        clases={clases}
+        caballos={caballos}
+        alumnos={alumnos}
+        instructores={instructores}
+        onStatusChange={handleStatusChange}
+        onCellClick={handleDayViewCellClick}
+      />
+    </CardContent>
+  </Card>
+) : (
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {/* Day Headers */}
@@ -411,6 +466,7 @@ export default function CalendarioPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Legend */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
@@ -443,7 +499,11 @@ export default function CalendarioPage() {
       {/* New Class Dialog */}
       <Dialog open={isOpen} onOpenChange={(open) => {
         setIsOpen(open);
-        if (!open) setSelectedDate(null);
+          if (!open) {
+          setSelectedDate(null);
+          setPrefilledCaballoId(null);
+          setPrefilledHora(null);
+        }
       }}>
         <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleSubmit}>
@@ -462,7 +522,7 @@ export default function CalendarioPage() {
                   id="hora "
                   name="hora "
                   type="time"
-                  defaultValue="09:00"
+                  defaultValue={prefilledHora || "09:00"}
                   required
                 />
               </div>
@@ -500,7 +560,7 @@ export default function CalendarioPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="caballoId">Caballo</Label>
-                <Select name="caballoId" required>
+                <Select name="caballoId" required defaultValue={prefilledCaballoId ? String(prefilledCaballoId) : undefined}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar caballo" />
                   </SelectTrigger>
