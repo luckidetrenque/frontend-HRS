@@ -321,6 +321,7 @@ export default function ClasesPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                                    <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="especialidad">Especialidad</Label>
                     <Select
@@ -339,12 +340,11 @@ export default function ClasesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {editingClase && (
-                    <div className="space-y-2">
-                      <Label htmlFor="estado">Estado</Label>
-                      <Select name="estado" defaultValue={editingClase.estado}>
+                                    <div className="space-y-2">
+                    <Label htmlFor="estado">Estado</Label>
+                      <Select name="estado" defaultValue={editingClase?.estado || ""}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Seleccionar estado"/>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PROGRAMADA">Programada</SelectItem>
@@ -355,8 +355,10 @@ export default function ClasesPage() {
                           <SelectItem value="ASA">ASA</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  )}
+                  </div>
+
+
+                                    </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>

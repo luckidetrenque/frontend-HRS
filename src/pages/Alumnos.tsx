@@ -294,6 +294,7 @@ export default function AlumnosPage() {
                     </div>
                   </div>
 
+                                          <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <Switch
                       id="propietario"
@@ -302,6 +303,16 @@ export default function AlumnosPage() {
                     />
                     <Label htmlFor="propietario">Tiene caballo propio</Label>
                   </div>
+                                    <div className="flex items-center gap-3">
+                    <Switch
+                      id="activo"
+                      name="activo"
+                      defaultChecked={editingAlumno?.activo}
+                    />
+                    <Label htmlFor="activo">Esta activo</Label>
+                  </div>
+                                          </div>
+
                 </div>
                 <DialogFooter>
                   <Button

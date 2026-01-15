@@ -263,7 +263,8 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
             <ChevronRight className="h-4 w-4" />
           </Button>
           <h2 className="ml-4 font-display text-xl font-semibold capitalize">
-            {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Semana del' d 'de' MMMM", { locale: es })}
+              {getViewTitle()}
+              {/* {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Semana del' d 'de' MMMM", { locale: es })} */}
           </h2>
           
         </div>

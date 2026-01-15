@@ -59,41 +59,56 @@ export interface ClaseDetallada extends Clase {
   caballo?: Caballo;
 }
 
+async function apiFetch(endpoint: string, options: RequestInit = {}) {
+  const credentials = localStorage.getItem('authCredentials');
+
+  // Definimos los headers usando el tipo Record para evitar el 'any'
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>), // Mantenemos headers existentes si los hay
+  };
+
+  if (credentials) {
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers, // Ahora headers es un objeto de tipo Record<string, string>
+  });
+}
+
 // API Functions
 async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    // Intentamos leer el JSON del error
-    const errorData = await response.json().catch(() => ({}));
-    if (errorData.errores) {
-      throw new Error(
-        Object.keys(errorData.errores)
-          .map((campo) => `${errorData.errores[campo]}`)
-          .join("\n")
-      );
-    } else {
-      // Extraemos el mensaje específico del backend o usamos un fallback
-      const errorMessage =
-        errorData.mensaje ||
-        errorData.error ||
-        `Error ${response.status}: ${response.statusText}`;
-      throw new Error(errorMessage);
-    }
+  if (response.status === 401) {
+    // Opcional: Manejo automático de sesión expirada
+    localStorage.removeItem('authCredentials');
+    localStorage.removeItem('user');
+    window.location.href = '/login'; 
+    throw new Error("Sesión no autorizada");
   }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.mensaje || errorData.error || `Error ${response.status}`;
+    throw new Error(errorMessage);
+  }
+  
   return response.json() as Promise<T>;
 }
 
 // Alumnos
 export const alumnosApi = {
   listar: async (): Promise<Alumno[]> => {
-    const response = await fetch(`${API_BASE_URL}/alumnos`);
+    const response = await apiFetch('/alumnos');
     return handleResponse<Alumno[]>(response);
   },
   obtener: async (id: number): Promise<Alumno> => {
-    const response = await fetch(`${API_BASE_URL}/alumnos/${id}`);
+    const response = await apiFetch(`/alumnos/${id}`);
     return handleResponse<Alumno>(response);
   },
   crear: async (alumno: Omit<Alumno, "id">): Promise<Alumno> => {
-    const response = await fetch(`${API_BASE_URL}/alumnos`, {
+    const response = await apiFetch(`/alumnos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(alumno),
@@ -101,7 +116,7 @@ export const alumnosApi = {
     return handleResponse<Alumno>(response);
   },
   actualizar: async (id: number, alumno: Partial<Alumno>): Promise<Alumno> => {
-    const response = await fetch(`${API_BASE_URL}/alumnos/${id}`, {
+    const response = await apiFetch(`/alumnos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(alumno),
@@ -109,7 +124,7 @@ export const alumnosApi = {
     return handleResponse<Alumno>(response);
   },
   eliminar: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/alumnos/${id}`, {
+    const response = await apiFetch(`/alumnos/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
@@ -119,15 +134,15 @@ export const alumnosApi = {
 // Instructores
 export const instructoresApi = {
   listar: async (): Promise<Instructor[]> => {
-    const response = await fetch(`${API_BASE_URL}/instructores`);
+    const response = await apiFetch('/instructores');
     return handleResponse<Instructor[]>(response);
   },
   obtener: async (id: number): Promise<Instructor> => {
-    const response = await fetch(`${API_BASE_URL}/instructores/${id}`);
+    const response = await apiFetch(`/instructores/${id}`);
     return handleResponse<Instructor>(response);
   },
   crear: async (instructor: Omit<Instructor, "id">): Promise<Instructor> => {
-    const response = await fetch(`${API_BASE_URL}/instructores`, {
+    const response = await apiFetch(`/instructores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(instructor),
@@ -138,7 +153,7 @@ export const instructoresApi = {
     id: number,
     instructor: Partial<Instructor>
   ): Promise<Instructor> => {
-    const response = await fetch(`${API_BASE_URL}/instructores/${id}`, {
+    const response = await apiFetch(`/instructores/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(instructor),
@@ -146,7 +161,7 @@ export const instructoresApi = {
     return handleResponse<Instructor>(response);
   },
   eliminar: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/instructores/${id}`, {
+    const response = await apiFetch(`/instructores/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
@@ -156,15 +171,15 @@ export const instructoresApi = {
 // Caballos
 export const caballosApi = {
   listar: async (): Promise<Caballo[]> => {
-    const response = await fetch(`${API_BASE_URL}/caballos`);
+    const response = await apiFetch('/caballos');
     return handleResponse<Caballo[]>(response);
   },
   obtener: async (id: number): Promise<Caballo> => {
-    const response = await fetch(`${API_BASE_URL}/caballos/${id}`);
+    const response = await apiFetch(`/caballos/${id}`);
     return handleResponse<Caballo>(response);
   },
   crear: async (caballo: Omit<Caballo, "id">): Promise<Caballo> => {
-    const response = await fetch(`${API_BASE_URL}/caballos`, {
+    const response = await apiFetch(`/caballos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(caballo),
@@ -175,7 +190,7 @@ export const caballosApi = {
     id: number,
     caballo: Partial<Caballo>
   ): Promise<Caballo> => {
-    const response = await fetch(`${API_BASE_URL}/caballos/${id}`, {
+    const response = await apiFetch(`/caballos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(caballo),
@@ -183,7 +198,7 @@ export const caballosApi = {
     return handleResponse<Caballo>(response);
   },
   eliminar: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/caballos/${id}`, {
+    const response = await apiFetch(`/caballos/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
@@ -193,19 +208,19 @@ export const caballosApi = {
 // Clases
 export const clasesApi = {
   listar: async (): Promise<Clase[]> => {
-    const response = await fetch(`${API_BASE_URL}/clases`);
+    const response = await apiFetch('/clases');
     return handleResponse<Clase[]>(response);
   },
   listarDetalladas: async (): Promise<ClaseDetallada[]> => {
-    const response = await fetch(`${API_BASE_URL}/clases/detalles`);
+    const response = await apiFetch(`/clases/detalles`);
     return handleResponse<ClaseDetallada[]>(response);
   },
   obtener: async (id: number): Promise<Clase> => {
-    const response = await fetch(`${API_BASE_URL}/clases/${id}`);
+    const response = await apiFetch(`/clases/${id}`);
     return handleResponse<Clase>(response);
   },
   crear: async (clase: Omit<Clase, "id">): Promise<Clase> => {
-    const response = await fetch(`${API_BASE_URL}/clases`, {
+    const response = await apiFetch(`/clases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(clase),
@@ -213,7 +228,7 @@ export const clasesApi = {
     return handleResponse<Clase>(response);
   },
   actualizar: async (id: number, clase: Partial<Clase>): Promise<Clase> => {
-    const response = await fetch(`${API_BASE_URL}/clases/${id}`, {
+    const response = await apiFetch(`/clases/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(clase),
@@ -221,7 +236,7 @@ export const clasesApi = {
     return handleResponse<Clase>(response);
   },
   eliminar: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/clases/${id}`, {
+    const response = await apiFetch(`/clases/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
@@ -230,7 +245,7 @@ export const clasesApi = {
     id: number,
     estado: Clase["estado"]
   ): Promise<Clase> => {
-    const response = await fetch(`${API_BASE_URL}/clases/${id}/estado`, {
+    const response = await apiFetch(`/clases/${id}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado }),
@@ -238,7 +253,7 @@ export const clasesApi = {
     return handleResponse<Clase>(response);
   },
   copiarSemana: async (payload?: unknown): Promise<unknown> => {
-    const response = await fetch(`${API_BASE_URL}/calendario/copiar-semana`, {
+    const response = await apiFetch(`/calendario/copiar-semana`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload ? JSON.stringify(payload) : undefined,

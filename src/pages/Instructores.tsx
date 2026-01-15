@@ -227,16 +227,6 @@ export default function InstructoresPage() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      defaultValue={editingInstructor?.email}
-                      required
-                    />
-                  </div>
                   <div className="flex items-center gap-3">
                     <Switch
                       id="activo"

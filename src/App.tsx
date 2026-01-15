@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import AlumnosPage from "./pages/Alumnos";
 import CaballosPage from "./pages/Caballos";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/instructores" element={<ProtectedRoute><InstructoresPage /></ProtectedRoute>} />
             <Route path="/clases" element={<ProtectedRoute><ClasesPage /></ProtectedRoute>} />
             <Route path="/calendario" element={<ProtectedRoute><CalendarioPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
