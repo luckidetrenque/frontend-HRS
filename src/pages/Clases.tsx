@@ -36,7 +36,10 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "default"> = {
+const estadoColors: Record<
+  string,
+  "success" | "warning" | "error" | "info" | "default"
+> = {
   PROGRAMADA: "warning",
   EN_CURSO: "info",
   COMPLETADA: "success",
@@ -45,11 +48,7 @@ const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "d
   ASA: "info",
 };
 
-const especialidad = [
-    "EQUINOTERAPIA",
-    "EQUITACION",
-    "ADIESTRAMIENTO",
-];
+const especialidad = ["EQUINOTERAPIA", "EQUITACION", "ADIESTRAMIENTO"];
 
 export default function ClasesPage() {
   const queryClient = useQueryClient();
@@ -83,7 +82,8 @@ export default function ClasesPage() {
       setIsOpen(false);
       toast.success("Clase creada correctamente");
     },
-    onError: (error: Error) => toast.error(error.message ||"Error al crear la clase"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al crear la clase"),
   });
 
   const updateMutation = useMutation({
@@ -95,7 +95,8 @@ export default function ClasesPage() {
       setEditingClase(null);
       toast.success("Clase actualizada correctamente");
     },
-    onError: (error: Error) => toast.error(error.message ||"Error al actualizar la clase"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar la clase"),
   });
 
   const deleteMutation = useMutation({
@@ -104,18 +105,31 @@ export default function ClasesPage() {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       toast.success("Clase eliminada correctamente");
     },
-    onError: (error: Error) => toast.error(error.message ||"Error al eliminar la clase"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar la clase"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
-      especialidad: formData.get("especialidad") as "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION",
+      especialidad: formData.get("especialidad") as
+        | "ADIESTRAMIENTO"
+        | "EQUINOTERAPIA"
+        | "EQUIITACION",
       dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
-      hora: new Date(`1970-01-01T${formData.get("hora") as string}`).toISOString().split("T")[1].substring(0,5),
+      hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
+        .toISOString()
+        .split("T")[1]
+        .substring(0, 5),
       duracion: 60,
-      estado: formData.get("estado") as "PROGRAMADA" | "EN_CURSO" | "COMPLETADA" | "CANCELADA" | "ACA" | "ASA",
+      estado: formData.get("estado") as
+        | "PROGRAMADA"
+        | "EN_CURSO"
+        | "COMPLETADA"
+        | "CANCELADA"
+        | "ACA"
+        | "ASA",
       observaciones: "",
       alumnoId: Number(formData.get("alumnoId")),
       instructorId: Number(formData.get("instructorId")),
@@ -148,11 +162,11 @@ export default function ClasesPage() {
     {
       header: "Dia",
       cell: (row: Clase) =>
-        `${row.dia.split("-")[2]}/${
-          row.dia.split("-")[1]
-        }/${row.dia.split("-")[0]}`,
+        `${row.dia.split("-")[2]}/${row.dia.split("-")[1]}/${
+          row.dia.split("-")[0]
+        }`,
     },
-        {
+    {
       header: "Hora",
       cell: (row: Clase) => row.hora.split(":").slice(0, 2).join(":"),
     },
@@ -294,7 +308,10 @@ export default function ClasesPage() {
                         {instructores
                           .filter((i: Instructor) => i.activo)
                           .map((instructor: Instructor) => (
-                            <SelectItem key={instructor.id} value={String(instructor.id)}>
+                            <SelectItem
+                              key={instructor.id}
+                              value={String(instructor.id)}
+                            >
                               {instructor.nombre} {instructor.apellido}
                             </SelectItem>
                           ))}
@@ -314,37 +331,47 @@ export default function ClasesPage() {
                         {caballos
                           .filter((c: Caballo) => c.disponible)
                           .map((caballo: Caballo) => (
-                            <SelectItem key={caballo.id} value={String(caballo.id)}>
-                              {caballo.nombre} ({caballo.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"})
+                            <SelectItem
+                              key={caballo.id}
+                              value={String(caballo.id)}
+                            >
+                              {caballo.nombre} (
+                              {caballo.tipoCaballo === "ESCUELA"
+                                ? "Escuela"
+                                : "Privado"}
+                              )
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                   </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="especialidad">Especialidad</Label>
-                    <Select
-                      name="especialidad"
-                      defaultValue={editingClase?.especialidad || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar especialidad" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {especialidad.map((esp) => (
-                          <SelectItem key={esp} value={esp}>
-                            {esp}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                                    <div className="space-y-2">
-                    <Label htmlFor="estado">Estado</Label>
-                      <Select name="estado" defaultValue={editingClase?.estado || ""}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="especialidad">Especialidad</Label>
+                      <Select
+                        name="especialidad"
+                        defaultValue={editingClase?.especialidad || ""}
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar estado"/>
+                          <SelectValue placeholder="Seleccionar especialidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {especialidad.map((esp) => (
+                            <SelectItem key={esp} value={esp}>
+                              {esp}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="estado">Estado</Label>
+                      <Select
+                        name="estado"
+                        defaultValue={editingClase?.estado || ""}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar estado" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="PROGRAMADA">Programada</SelectItem>
@@ -355,13 +382,25 @@ export default function ClasesPage() {
                           <SelectItem value="ASA">ASA</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
                   </div>
-
-
-                                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="observaciones">Observaciones</Label>
+                    <Input
+                      id="observaciones"
+                      name="observaciones"
+                      defaultValue={editingClase?.observaciones || ""}
+                      required
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
+                  >
                     {editingClase ? "Guardar Cambios" : "Crear Clase"}
                   </Button>
                 </DialogFooter>

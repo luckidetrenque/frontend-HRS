@@ -10,6 +10,7 @@ export interface User {
   fechaCreacion: string;
   personaDni?: string;
   personaTipoDni?: string;
+  avatarUrl: "https://picsum.photos/id/237/200/300";
 }
 
 export interface LoginCredentials {

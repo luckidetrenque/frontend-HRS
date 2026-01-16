@@ -104,11 +104,15 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
     queryFn: caballosApi.listar,
   });
 
+  // Estados separados
+const [isCreateOpen, setIsCreateOpen] = useState(false);
+const [isCopyOpen, setIsCopyOpen] = useState(false);
+
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
-      setIsOpen(false);
+      setIsCreateOpen(false);
       setSelectedDate(null);
       toast.success("Clase creada correctamente");
     },
@@ -126,17 +130,17 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
     onError: (error: Error) => toast.error(error.message || "Error al actualizar la clase"),
   });
 
-  const copyWeekMutation = useMutation({
-    mutationFn: () => {
-      const semanaInicio = format(startOfWeek(currentDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
-      return clasesApi.copiarSemana({ fechaInicio: semanaInicio });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clases"] });
-      toast.success("Semana copiada correctamente");
-    },
-    onError: (error: Error) => toast.error(error.message || "Error al copiar la semana"),
-  });
+ const copyWeekMutation = useMutation({
+  mutationFn: (datos: { diaInicioOrigen: string; diaInicioDestino: string }) => {
+    return clasesApi.copiarSemana(datos);
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["clases"] });
+    setIsCopyOpen(false);
+    toast.success("Semana copiada correctamente");
+  },
+  onError: (error: Error) => toast.error(error.message || "Error al copiar la semana"),
+});
 
   // Generate days for the calendar view
   const calendarDays = useMemo(() => {
@@ -212,16 +216,32 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
     return caballo?.nombre || "-";
   };
 
-  const handleDayClick = (date: Date) => {
-    setSelectedDate(date);
-    setIsOpen(true);
-  };
+const handleDayClick = (date: Date) => {
+  setSelectedDate(date);
+  setIsCreateOpen(true); // Cambiado de setIsOpen
+};
 
   const handleDayViewCellClick = (caballo: Caballo, hora: string) => {
   setSelectedDate(currentDate);
   setPrefilledCaballoId(caballo.id);
   setPrefilledHora(hora);
   setIsOpen(true);
+};
+
+const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  const formData = new FormData(e.currentTarget);
+  const data = {
+    diaInicioOrigen: formData.get("inicioOri") as string,
+    diaInicioDestino: formData.get("inicioDes") as string,
+  };
+  
+  if (!data.diaInicioOrigen || !data.diaInicioDestino) {
+    toast.error("Ambas fechas son obligatorias");
+    return;
+  }
+  
+  copyWeekMutation.mutate(data);
 };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -291,16 +311,52 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
     >
     Día
     </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copyWeekMutation.mutate()}
-            disabled={copyWeekMutation.isPending}
-          >            
-            <ClipboardCopy />
-            Copiar Semana
-          </Button>
+<Dialog open={isCopyOpen} onOpenChange={setIsCopyOpen}>
+  <DialogTrigger asChild>
+    <Button variant="outline" size="sm">
+      <ClipboardCopy className="mr-2 h-4 w-4" />
+      Copiar Semana
+    </Button>
+  </DialogTrigger>
+  <DialogContent className="sm:max-w-md">
+    {/* IMPORTANTE: Cambiamos el onSubmit aquí */}
+    <form onSubmit={handleCopySubmit}>
+      <DialogHeader>
+        <DialogTitle className="font-display">Selecciona las semanas a copiar</DialogTitle>
+        <DialogDescription>
+          Indica un día de la semana que quieres copiar y el día equivalente de la semana destino.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="inicioOri">Día de origen</Label>
+            <Input
+              id="inicioOri"
+              name="inicioOri"
+              type="date"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inicioDes">Día de destino</Label>
+            <Input
+              id="inicioDes"
+              name="inicioDes"
+              type="date"
+              required
+            />
+          </div>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="submit" disabled={copyWeekMutation.isPending}>
+          {copyWeekMutation.isPending ? "Copiando..." : "Copiar semana"}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
         </div>
       </div>
 
@@ -498,14 +554,14 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
       </div>
 
       {/* New Class Dialog */}
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-          if (!open) {
-          setSelectedDate(null);
-          setPrefilledCaballoId(null);
-          setPrefilledHora(null);
-        }
-      }}>
+<Dialog open={isCreateOpen} onOpenChange={(open) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setSelectedDate(null);
+      setPrefilledCaballoId(null);
+      setPrefilledHora(null);
+    }
+}}>
         <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
