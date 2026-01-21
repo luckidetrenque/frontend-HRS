@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,6 +7,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,21 @@ export default function ClasesPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingClase, setEditingClase] = useState<Clase | null>(null);
 
+  // Estados de filtros
+  const [filters, setFilters] = useState({
+    dia: "",
+    hora: "",
+    alumnoId: "all",
+    instructorId: "all",
+    caballoId: "all",
+    especialidad: "all",
+    estado: "all",
+  });
+
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
     queryFn: clasesApi.listarDetalladas,
@@ -74,6 +91,143 @@ export default function ClasesPage() {
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
   });
+
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return clases.filter((clase: Clase) => {
+      if (filters.dia && clase.dia !== filters.dia) {
+        return false;
+      }
+      if (filters.hora && !clase.hora.startsWith(filters.hora)) {
+        return false;
+      }
+      if (
+        filters.alumnoId !== "all" &&
+        clase.alumnoId !== Number(filters.alumnoId)
+      ) {
+        return false;
+      }
+      if (
+        filters.instructorId !== "all" &&
+        clase.instructorId !== Number(filters.instructorId)
+      ) {
+        return false;
+      }
+      if (
+        filters.caballoId !== "all" &&
+        clase.caballoId !== Number(filters.caballoId)
+      ) {
+        return false;
+      }
+      if (
+        filters.especialidad !== "all" &&
+        clase.especialidad !== filters.especialidad
+      ) {
+        return false;
+      }
+      if (filters.estado !== "all" && clase.estado !== filters.estado) {
+        return false;
+      }
+      return true;
+    });
+  }, [clases, filters]);
+
+  // Paginar datos
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+
+  // Configuración de filtros
+  const filterConfig = [
+    {
+      name: "dia",
+      label: "Día",
+      type: "date" as const,
+      placeholder: "Seleccionar día",
+    },
+    {
+      name: "hora",
+      label: "Hora",
+      type: "time" as const,
+      placeholder: "Seleccionar hora",
+    },
+    {
+      name: "alumnoId",
+      label: "Alumno",
+      type: "select" as const,
+      options: alumnos.map((a: Alumno) => ({
+        label: `${a.nombre} ${a.apellido}`,
+        value: String(a.id),
+      })),
+    },
+    {
+      name: "instructorId",
+      label: "Instructor",
+      type: "select" as const,
+      options: instructores.map((i: Instructor) => ({
+        label: `${i.nombre} ${i.apellido}`,
+        value: String(i.id),
+      })),
+    },
+    {
+      name: "caballoId",
+      label: "Caballo",
+      type: "select" as const,
+      options: caballos.map((c: Caballo) => ({
+        label: c.nombre,
+        value: String(c.id),
+      })),
+    },
+    {
+      name: "especialidad",
+      label: "Especialidad",
+      type: "select" as const,
+      options: especialidad.map((e) => ({
+        label: e,
+        value: e,
+      })),
+    },
+    {
+      name: "estado",
+      label: "Estado",
+      type: "select" as const,
+      options: [
+        { label: "Programada", value: "PROGRAMADA" },
+        { label: "En Curso", value: "EN_CURSO" },
+        { label: "Completada", value: "COMPLETADA" },
+        { label: "Cancelada", value: "CANCELADA" },
+        { label: "ACA", value: "ACA" },
+        { label: "ASA", value: "ASA" },
+      ],
+    },
+  ];
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      dia: "",
+      hora: "",
+      alumnoId: "all",
+      instructorId: "all",
+      caballoId: "all",
+      especialidad: "all",
+      estado: "all",
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
@@ -112,6 +266,7 @@ export default function ClasesPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+
     const data = {
       especialidad: formData.get("especialidad") as
         | "ADIESTRAMIENTO"
@@ -134,6 +289,7 @@ export default function ClasesPage() {
       alumnoId: Number(formData.get("alumnoId")),
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
+      diaHoraCompleto: "",
     };
 
     if (editingClase) {
@@ -158,6 +314,32 @@ export default function ClasesPage() {
     return caballo?.nombre || "-";
   };
 
+  const formatearConZona = (diaHoraIso: string) => {
+    return new Intl.DateTimeFormat("es-AR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "America/Argentina/Buenos_Aires", // Fuerza la zona horaria
+    }).format(new Date(diaHoraIso));
+  };
+
+  const obtenerHoraArgentina = (isoString?: string) => {
+    if (!isoString) return "";
+
+    const fecha = new Date(isoString);
+    if (isNaN(fecha.getTime())) return "";
+
+    // Forzamos la zona horaria a America/Argentina/Buenos_Aires
+    return fecha
+      .toLocaleTimeString("es-AR", {
+        timeZone: "America/Argentina/Buenos_Aires",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // Formato 24hs requerido por el input
+      })
+      .replace(":", ":"); // Asegura que use el separador estándar
+  };
+
   const columns = [
     {
       header: "Dia",
@@ -168,7 +350,7 @@ export default function ClasesPage() {
     },
     {
       header: "Hora",
-      cell: (row: Clase) => row.hora.split(":").slice(0, 2).join(":"),
+      cell: (row: Clase) => formatearConZona(row.diaHoraCompleto),
     },
     {
       header: "Alumno",
@@ -272,80 +454,88 @@ export default function ClasesPage() {
                         id="hora"
                         name="hora"
                         type="time"
-                        defaultValue={editingClase?.hora}
+                        defaultValue={obtenerHoraArgentina(
+                          editingClase?.diaHoraCompleto?.toString(),
+                        )}
+                        // defaultValue={editingClase?.hora}
                         required
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="alumnoId">Alumno</Label>
-                    <Select
-                      name="alumnoId"
-                      defaultValue={String(editingClase?.alumnoId || "")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar alumno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {alumnos.map((alumno: Alumno) => (
-                          <SelectItem key={alumno.id} value={String(alumno.id)}>
-                            {alumno.nombre} {alumno.apellido}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="instructorId">Instructor</Label>
-                    <Select
-                      name="instructorId"
-                      defaultValue={String(editingClase?.instructorId || "")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar instructor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {instructores
-                          .filter((i: Instructor) => i.activo)
-                          .map((instructor: Instructor) => (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="alumnoId">Alumno</Label>
+                      <Select
+                        name="alumnoId"
+                        defaultValue={String(editingClase?.alumnoId || "")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar alumno" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {alumnos.map((alumno: Alumno) => (
                             <SelectItem
-                              key={instructor.id}
-                              value={String(instructor.id)}
+                              key={alumno.id}
+                              value={String(alumno.id)}
                             >
-                              {instructor.nombre} {instructor.apellido}
+                              {alumno.nombre} {alumno.apellido}
                             </SelectItem>
                           ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="caballoId">Caballo</Label>
-                    <Select
-                      name="caballoId"
-                      defaultValue={String(editingClase?.caballoId || "")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar caballo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {caballos
-                          .filter((c: Caballo) => c.disponible)
-                          .map((caballo: Caballo) => (
-                            <SelectItem
-                              key={caballo.id}
-                              value={String(caballo.id)}
-                            >
-                              {caballo.nombre} (
-                              {caballo.tipoCaballo === "ESCUELA"
-                                ? "Escuela"
-                                : "Privado"}
-                              )
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="caballoId">Caballo</Label>
+                      <Select
+                        name="caballoId"
+                        defaultValue={String(editingClase?.caballoId || "")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar caballo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {caballos
+                            .filter((c: Caballo) => c.disponible)
+                            .map((caballo: Caballo) => (
+                              <SelectItem
+                                key={caballo.id}
+                                value={String(caballo.id)}
+                              >
+                                {caballo.nombre} (
+                                {caballo.tipoCaballo === "ESCUELA"
+                                  ? "Escuela"
+                                  : "Privado"}
+                                )
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="instructorId">Instructor</Label>
+                      <Select
+                        name="instructorId"
+                        defaultValue={String(editingClase?.instructorId || "")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar instructor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {instructores
+                            .filter((i: Instructor) => i.activo)
+                            .map((instructor: Instructor) => (
+                              <SelectItem
+                                key={instructor.id}
+                                value={String(instructor.id)}
+                              >
+                                {instructor.nombre} {instructor.apellido}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="especialidad">Especialidad</Label>
                       <Select
@@ -364,6 +554,8 @@ export default function ClasesPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="estado">Estado</Label>
                       <Select
@@ -383,15 +575,15 @@ export default function ClasesPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="observaciones">Observaciones</Label>
-                    <Input
-                      id="observaciones"
-                      name="observaciones"
-                      defaultValue={editingClase?.observaciones || ""}
-                      required
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="observaciones">Observaciones</Label>
+                      <Input
+                        id="observaciones"
+                        name="observaciones"
+                        defaultValue={editingClase?.observaciones || ""}
+                        placeholder="Ej. Lluvia, Feriado, etc"
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -410,12 +602,32 @@ export default function ClasesPage() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={clases}
-        isLoading={isLoading}
-        emptyMessage="No hay clases programadas"
-      />
+      <div className="space-y-4">
+        <FilterBar
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          isLoading={isLoading}
+          emptyMessage="No hay clases que coincidan con los filtros"
+        />
+
+        {filteredData.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredData.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
+      </div>
     </Layout>
   );
 }

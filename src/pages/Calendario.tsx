@@ -5,9 +5,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { addDays, subDays } from "date-fns";
 import { DayView } from "@/components/calendar/DayView";
 import {
@@ -41,23 +41,42 @@ import {
   Instructor,
   Caballo,
 } from "@/lib/api";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
   Calendar as CalendarIcon,
   Clock,
   User,
   UserCheck,
   Landmark,
   ClipboardCopy,
+  Delete,
+  Eraser,
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks, isToday } from "date-fns";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  isSameMonth,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subWeeks,
+  isToday,
+} from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "default"> = {
+const estadoColors: Record<
+  string,
+  "success" | "warning" | "error" | "info" | "default"
+> = {
   PROGRAMADA: "warning",
   EN_CURSO: "info",
   COMPLETADA: "success",
@@ -66,11 +85,7 @@ const estadoColors: Record<string, "success" | "warning" | "error" | "info" | "d
   ASA: "info",
 };
 
-const especialidad = [
-    "EQUINOTERAPIA",
-    "EQUITACION",
-    "ADIESTRAMIENTO",
-];
+const especialidad = ["EQUINOTERAPIA", "EQUITACION", "ADIESTRAMIENTO"];
 
 type ViewMode = "month" | "week" | "day";
 
@@ -81,8 +96,16 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedClase, setSelectedClase] = useState<Clase | null>(null);
-  const [prefilledCaballoId, setPrefilledCaballoId] = useState<number | null>(null);
-const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
+  const [prefilledCaballoId, setPrefilledCaballoId] = useState<number | null>(
+    null,
+  );
+  const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
+
+  // Estados de filtros
+  const [filters, setFilters] = useState({
+    alumnoId: "all",
+    instructorId: "all",
+  });
 
   const { data: clases = [], isLoading } = useQuery({
     queryKey: ["clases"],
@@ -105,8 +128,63 @@ const [prefilledHora, setPrefilledHora] = useState<string | null>(null);
   });
 
   // Estados separados
-const [isCreateOpen, setIsCreateOpen] = useState(false);
-const [isCopyOpen, setIsCopyOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCopyOpen, setIsCopyOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  // Filtrar clases según filtros activos
+  const filteredClases = useMemo(() => {
+    return clases.filter((clase: Clase) => {
+      if (
+        filters.alumnoId !== "all" &&
+        clase.alumnoId !== Number(filters.alumnoId)
+      ) {
+        return false;
+      }
+      if (
+        filters.instructorId !== "all" &&
+        clase.instructorId !== Number(filters.instructorId)
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [clases, filters]);
+
+  // Configuración de filtros
+  const filterConfig = [
+    {
+      name: "alumnoId",
+      label: "Alumno",
+      type: "select" as const,
+      options: alumnos.map((a: Alumno) => ({
+        label: `${a.nombre} ${a.apellido}`,
+        value: String(a.id),
+      })),
+      placeholder: "Todos los alumnos",
+    },
+    {
+      name: "instructorId",
+      label: "Instructor",
+      type: "select" as const,
+      options: instructores.map((i: Instructor) => ({
+        label: `${i.nombre} ${i.apellido}`,
+        value: String(i.id),
+      })),
+      placeholder: "Todos los instructores",
+    },
+  ];
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      alumnoId: "all",
+      instructorId: "all",
+    });
+  };
 
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
@@ -116,7 +194,8 @@ const [isCopyOpen, setIsCopyOpen] = useState(false);
       setSelectedDate(null);
       toast.success("Clase creada correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al crear la clase"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al crear la clase"),
   });
 
   const updateMutation = useMutation({
@@ -127,20 +206,69 @@ const [isCopyOpen, setIsCopyOpen] = useState(false);
       setSelectedClase(null);
       toast.success("Clase actualizada correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al actualizar la clase"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar la clase"),
   });
 
- const copyWeekMutation = useMutation({
-  mutationFn: (datos: { diaInicioOrigen: string; diaInicioDestino: string }) => {
-    return clasesApi.copiarSemana(datos);
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["clases"] });
-    setIsCopyOpen(false);
-    toast.success("Semana copiada correctamente");
-  },
-  onError: (error: Error) => toast.error(error.message || "Error al copiar la semana"),
-});
+  const copyWeekMutation = useMutation({
+    mutationFn: (datos: {
+      diaInicioOrigen: string;
+      diaInicioDestino: string;
+    }) => {
+      return clasesApi.copiarSemana(datos);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      setIsCopyOpen(false);
+      toast.success("Semana copiada correctamente");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al copiar la semana"),
+  });
+
+  const deleteWeekMutation = useMutation({
+    mutationFn: (datos: {
+      diaInicioOrigen: string;
+      diaInicioDestino: string;
+    }) => {
+      return clasesApi.eliminarClases(datos);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      setIsDeleteOpen(false);
+      toast.success("Clases eliminadas correctamente");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar clases"),
+  });
+
+  const bulkCancelMutation = useMutation({
+    mutationFn: async ({
+      claseIds,
+      observaciones,
+    }: {
+      claseIds: number[];
+      observaciones: string;
+    }) => {
+      // Actualizar cada clase con estado CANCELADA y observaciones
+      await Promise.all(
+        claseIds.map((id) =>
+          clasesApi.actualizar(id, {
+            estado: "CANCELADA",
+            observaciones,
+          }),
+        ),
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["clases"] });
+      toast.success(
+        `${variables.claseIds.length} clases canceladas correctamente`,
+      );
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al cancelar las clases"),
+  });
 
   // Generate days for the calendar view
   const calendarDays = useMemo(() => {
@@ -155,29 +283,40 @@ const [isCopyOpen, setIsCopyOpen] = useState(false);
     }
   }, [currentDate, viewMode]);
 
-  // Group clases by date
+  // Group clases by date (usando filteredClases en lugar de clases)
   const clasesByDate = useMemo(() => {
     const grouped: Record<string, Clase[]> = {};
-    clases.forEach((clase: Clase) => {
+    filteredClases.forEach((clase: Clase) => {
       const dateKey = clase.dia;
       if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(clase);
     });
     // Sort by time
-    Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => a.hora .localeCompare(b.hora ));
+    Object.keys(grouped).forEach((key) => {
+      grouped[key].sort((a, b) => a.hora.localeCompare(b.hora));
     });
     return grouped;
-  }, [clases]);
+  }, [filteredClases]);
 
   const navigate = (direction: "prev" | "next") => {
     if (viewMode === "month") {
-      setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+      setCurrentDate(
+        direction === "prev"
+          ? subMonths(currentDate, 1)
+          : addMonths(currentDate, 1),
+      );
     } else if (viewMode === "week") {
-      setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
+      setCurrentDate(
+        direction === "prev"
+          ? subWeeks(currentDate, 1)
+          : addWeeks(currentDate, 1),
+      );
     } else {
-      // Vista de día
-      setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
+      setCurrentDate(
+        direction === "prev"
+          ? subDays(currentDate, 1)
+          : addDays(currentDate, 1),
+      );
     }
   };
 
@@ -197,10 +336,12 @@ const [isCopyOpen, setIsCopyOpen] = useState(false);
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre} ${alumno.apellido}` : "-";
   };
+
   const getAlumnoNombre = (id: number) => {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.nombre}` : "-";
   };
+
   const getAlumnoApellido = (id: number) => {
     const alumno = alumnos.find((a: Alumno) => a.id === id);
     return alumno ? `${alumno.apellido}` : "-";
@@ -216,33 +357,49 @@ const [isCopyOpen, setIsCopyOpen] = useState(false);
     return caballo?.nombre || "-";
   };
 
-const handleDayClick = (date: Date) => {
-  setSelectedDate(date);
-  setIsCreateOpen(true); // Cambiado de setIsOpen
-};
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsCreateOpen(true);
+  };
 
   const handleDayViewCellClick = (caballo: Caballo, hora: string) => {
-  setSelectedDate(currentDate);
-  setPrefilledCaballoId(caballo.id);
-  setPrefilledHora(hora);
-  setIsOpen(true);
-};
-
-const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  const formData = new FormData(e.currentTarget);
-  const data = {
-    diaInicioOrigen: formData.get("inicioOri") as string,
-    diaInicioDestino: formData.get("inicioDes") as string,
+    setSelectedDate(currentDate);
+    setPrefilledCaballoId(caballo.id);
+    setPrefilledHora(hora);
+    setIsOpen(true);
   };
-  
-  if (!data.diaInicioOrigen || !data.diaInicioDestino) {
-    toast.error("Ambas fechas son obligatorias");
-    return;
-  }
-  
-  copyWeekMutation.mutate(data);
-};
+
+  const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      diaInicioOrigen: formData.get("inicioOri") as string,
+      diaInicioDestino: formData.get("inicioDes") as string,
+    };
+
+    if (!data.diaInicioOrigen || !data.diaInicioDestino) {
+      toast.error("Ambas fechas son obligatorias");
+      return;
+    }
+
+    copyWeekMutation.mutate(data);
+  };
+
+  const handleDeleteSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      diaInicioOrigen: formData.get("inicioOri") as string,
+      diaInicioDestino: formData.get("inicioDes") as string,
+    };
+
+    if (!data.diaInicioOrigen || !data.diaInicioDestino) {
+      toast.error("Ambas fechas son obligatorias");
+      return;
+    }
+
+    deleteWeekMutation.mutate(data);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -251,9 +408,12 @@ const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
       alumnoId: Number(formData.get("alumnoId")),
       instructorId: Number(formData.get("instructorId")),
       caballoId: Number(formData.get("caballoId")),
-      especialidad: formData.get("especialidad") as "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION",
+      especialidad: formData.get("especialidad") as
+        | "ADIESTRAMIENTO"
+        | "EQUINOTERAPIA"
+        | "EQUIITACION",
       dia: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
-      hora : formData.get("hora ") as string,
+      hora: formData.get("hora") as string,
       estado: "PROGRAMADA" as const,
     };
     createMutation.mutate(data);
@@ -261,6 +421,10 @@ const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
 
   const handleStatusChange = (claseId: number, newStatus: Clase["estado"]) => {
     updateMutation.mutate({ id: claseId, data: { estado: newStatus } });
+  };
+
+  const handleBulkCancel = (claseIds: number[], observaciones: string) => {
+    bulkCancelMutation.mutate({ claseIds, observaciones });
   };
 
   return (
@@ -273,20 +437,26 @@ const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
       {/* Calendar Controls */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => navigate("prev")}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("prev")}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" onClick={goToToday}>
             Hoy
           </Button>
-          <Button variant="outline" size="icon" onClick={() => navigate("next")}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("next")}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <h2 className="ml-4 font-display text-xl font-semibold capitalize">
-              {getViewTitle()}
-              {/* {format(currentDate, viewMode === "month" ? "MMMM yyyy" : "'Semana del' d 'de' MMMM", { locale: es })} */}
+            {getViewTitle()}
           </h2>
-          
         </div>
 
         <div className="flex items-center gap-2">
@@ -304,225 +474,362 @@ const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
           >
             Semana
           </Button>
-            <Button
-    variant={viewMode === "day" ? "default" : "outline"}
-    size="sm"
-    onClick={() => setViewMode("day")}
-    >
-    Día
-    </Button>
-<Dialog open={isCopyOpen} onOpenChange={setIsCopyOpen}>
-  <DialogTrigger asChild>
-    <Button variant="outline" size="sm">
-      <ClipboardCopy className="mr-2 h-4 w-4" />
-      Copiar Semana
-    </Button>
-  </DialogTrigger>
-  <DialogContent className="sm:max-w-md">
-    {/* IMPORTANTE: Cambiamos el onSubmit aquí */}
-    <form onSubmit={handleCopySubmit}>
-      <DialogHeader>
-        <DialogTitle className="font-display">Selecciona las semanas a copiar</DialogTitle>
-        <DialogDescription>
-          Indica un día de la semana que quieres copiar y el día equivalente de la semana destino.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="inicioOri">Día de origen</Label>
-            <Input
-              id="inicioOri"
-              name="inicioOri"
-              type="date"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="inicioDes">Día de destino</Label>
-            <Input
-              id="inicioDes"
-              name="inicioDes"
-              type="date"
-              required
-            />
-          </div>
+          <Button
+            variant={viewMode === "day" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("day")}
+          >
+            Día
+          </Button>
+          <Dialog open={isCopyOpen} onOpenChange={setIsCopyOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-success/40 text-success hover:bg-success/10"
+              >
+                <ClipboardCopy className="mr-2 h-4 w-4" />
+                Copiar Clases
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <form onSubmit={handleCopySubmit}>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    Selecciona las semanas a copiar
+                  </DialogTitle>
+                  <DialogDescription>
+                    Indica un día de la semana que quieres copiar y el día
+                    equivalente de la semana destino.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inicioOri">Día de origen</Label>
+                      <Input
+                        id="inicioOri"
+                        name="inicioOri"
+                        type="date"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inicioDes">Día de destino</Label>
+                      <Input
+                        id="inicioDes"
+                        name="inicioDes"
+                        type="date"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={copyWeekMutation.isPending}>
+                    {copyWeekMutation.isPending
+                      ? "Copiando..."
+                      : "Copiar clases"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                <Eraser className="mr-2 h-4 w-4" />
+                Eliminar Clases
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <form onSubmit={handleDeleteSubmit}>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    Selecciona las clases a eliminar
+                  </DialogTitle>
+                  <DialogDescription>
+                    Indica el día de inicio y fin de las clases a eliminar.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="inicioOri">Día de origen</Label>
+                      <Input
+                        id="inicioOri"
+                        name="inicioOri"
+                        type="date"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inicioDes">Día de destino</Label>
+                      <Input
+                        id="inicioDes"
+                        name="inicioDes"
+                        type="date"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="submit"
+                    disabled={deleteWeekMutation.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/70"
+                  >
+                    {deleteWeekMutation.isPending
+                      ? "Eliminando..."
+                      : "Eliminar clases"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-      <DialogFooter>
-        <Button type="submit" disabled={copyWeekMutation.isPending}>
-          {copyWeekMutation.isPending ? "Copiando..." : "Copiar semana"}
-        </Button>
-      </DialogFooter>
-    </form>
-  </DialogContent>
-</Dialog>
-        </div>
+
+      {/* Filtros */}
+      <div className="mb-6">
+        <FilterBar
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
       </div>
 
       {/* Calendar Grid */}
-{viewMode === "day" ? (
-  <Card className="overflow-hidden">
-    <CardHeader className="border-b bg-secondary/30 py-3">
-      <CardTitle className="text-base font-medium">
-        {format(currentDate, "EEEE d 'de' MMMM", { locale: es })} — 
-        <span className="ml-2 text-muted-foreground">
-          {clases.filter((c: Clase) => c.dia === format(currentDate, "yyyy-MM-dd")).length} clases
-        </span>
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="p-0">
-      <DayView
-        selectedDate={currentDate}
-        clases={clases}
-        caballos={caballos}
-        alumnos={alumnos}
-        instructores={instructores}
-        onStatusChange={handleStatusChange}
-        onCellClick={handleDayViewCellClick}
-      />
-    </CardContent>
-  </Card>
-) : (
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 border-b border-border bg-secondary/50">
-            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
-              <div
-                key={day}
-                className="p-3 text-center text-sm font-semibold text-muted-foreground"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className={cn(
-            "grid grid-cols-7",
-            viewMode === "week" ? "min-h-[400px]" : ""
-          )}>
-            {calendarDays.map((day, index) => {
-              const dateKey = format(day, "yyyy-MM-dd");
-              const dayClases = clasesByDate[dateKey] || [];
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isCurrentDay = isToday(day);
-
-              return (
+      {viewMode === "day" ? (
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b bg-secondary/30 py-3">
+            <CardTitle className="text-base font-medium">
+              {format(currentDate, "EEEE d 'de' MMMM", { locale: es })} —
+              <span className="ml-2 text-muted-foreground">
+                {
+                  filteredClases.filter(
+                    (c: Clase) => c.dia === format(currentDate, "yyyy-MM-dd"),
+                  ).length
+                }{" "}
+                clases
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <DayView
+              selectedDate={currentDate}
+              clases={filteredClases}
+              caballos={caballos}
+              alumnos={alumnos}
+              instructores={instructores}
+              onStatusChange={handleStatusChange}
+              onCellClick={handleDayViewCellClick}
+              onBulkCancel={handleBulkCancel}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 border-b border-border bg-secondary/50">
+              {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((day) => (
                 <div
-                  key={index}
-                  className={cn(
-                    "min-h-[120px] border-b border-r border-border p-2 transition-colors",
-                    !isCurrentMonth && "bg-muted/30",
-                    isCurrentDay && "bg-accent/20",
-                    viewMode === "week" && "min-h-[350px]"
-                  )}
+                  key={day}
+                  className="p-3 text-center text-sm font-semibold text-muted-foreground"
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <button
-                      onClick={() => handleDayClick(day)}
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors hover:bg-primary hover:text-primary-foreground",
-                        isCurrentDay && "bg-primary text-primary-foreground",
-                        !isCurrentMonth && "text-muted-foreground"
-                      )}
-                    >
-                      {format(day, "d")}
-                    </button>
-                    {dayClases.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {dayClases.length} clase{dayClases.length > 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Classes for this day */}
-                  <div className="space-y-1">
-                    {dayClases.slice(0, viewMode === "week" ? 10 : 3).map((clase: Clase) => (
-                      <Popover key={clase.id}>
-                        <PopoverTrigger asChild>
-                          <button
-                            className={cn(
-                              "w-full rounded-md px-2 py-1 text-left text-xs transition-colors",
-                              clase.estado === "COMPLETADA" && "bg-success/20 text-success hover:bg-success/30",
-                              clase.estado === "EN_CURSO" && "bg-info/20 text-info hover:bg-info/30",
-                              clase.estado === "PROGRAMADA" && "bg-warning/20 text-warning hover:bg-warning/30",
-                              clase.estado === "CANCELADA" && "bg-destructive/20 text-destructive hover:bg-destructive/30",
-                              clase.estado === "ACA" && "bg-destructive/20 text-destructive hover:bg-destructive/30",
-                              clase.estado === "ASA" && "bg-destructive/20 text-destructive hover:bg-destructive/30"
-                            )}
-                          >
-                            <span className="font-medium">{clase.hora .slice(0, 5)}</span>
-                            <span className="ml-1 truncate">{getAlumnoApellido(clase.alumnoId).split(" ")[0]}</span>
-                            <span> /</span>
-                            <span className="ml-1 truncate">{getCaballoNombre(clase.caballoId).split(" ")[0]}</span>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0" align="start">
-                          <div className="p-4">
-                            <div className="mb-3 flex items-center justify-between">
-                              <h4 className="font-display font-semibold">Detalles de la Clase</h4>
-                              <StatusBadge status={estadoColors[clase.estado]}>
-                                {clase.estado}
-                              </StatusBadge>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span>{clase.hora.split(":").slice(0, 2).join(":") }</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span>{getAlumnoNombre(clase.alumnoId)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <UserCheck className="h-4 w-4 text-muted-foreground" />
-                                <span>{getInstructorNombre(clase.instructorId)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Landmark className="h-4 w-4 text-muted-foreground" />
-                                <span>{getCaballoNombre(clase.caballoId)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                <span>{clase.especialidad}</span>
-                              </div>
-                            </div>
-                            <div className="mt-4 border-t border-border pt-4">
-                              <Label className="mb-2 block text-xs text-muted-foreground">
-                                Cambiar Estado
-                              </Label>
-                              <div className="flex flex-wrap gap-1">
-                                {(["PROGRAMADA" , "EN_CURSO" , "COMPLETADA" , "CANCELADA" , "ACA" , "ASA"] as const).map((estado) => (
-                                  <Button
-                                    key={estado}
-                                    variant={clase.estado === estado ? "default" : "outline"}
-                                    size="sm"
-                                    className="text-xs"
-                                    onClick={() => handleStatusChange(clase.id, estado)}
-                                  >
-                                    {estado}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ))}
-                    {dayClases.length > (viewMode === "week" ? 10 : 3) && (
-                      <span className="block text-center text-xs text-muted-foreground">
-                        +{dayClases.length - (viewMode === "week" ? 10 : 3)} más
-                      </span>
-                    )}
-                  </div>
+                  {day}
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div
+              className={cn(
+                "grid grid-cols-7",
+                viewMode === "week" ? "min-h-[400px]" : "",
+              )}
+            >
+              {calendarDays.map((day, index) => {
+                const dateKey = format(day, "yyyy-MM-dd");
+                const dayClases = clasesByDate[dateKey] || [];
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const isCurrentDay = isToday(day);
+
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "min-h-[120px] border-b border-r border-border p-2 transition-colors",
+                      !isCurrentMonth && "bg-muted/30",
+                      isCurrentDay && "bg-accent/20",
+                      viewMode === "week" && "min-h-[350px]",
+                    )}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <button
+                        onClick={() => handleDayClick(day)}
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors hover:bg-primary hover:text-primary-foreground",
+                          isCurrentDay && "bg-primary text-primary-foreground",
+                          !isCurrentMonth && "text-muted-foreground",
+                        )}
+                      >
+                        {format(day, "d")}
+                      </button>
+                      {dayClases.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {dayClases.length} clase
+                          {dayClases.length > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Classes for this day */}
+                    <div className="space-y-1">
+                      {dayClases
+                        .slice(0, viewMode === "week" ? 10 : 3)
+                        .map((clase: Clase) => (
+                          <Popover key={clase.id}>
+                            <PopoverTrigger asChild>
+                              <button
+                                className={cn(
+                                  "w-full rounded-md px-2 py-1 text-left text-xs transition-colors",
+                                  clase.estado === "COMPLETADA" &&
+                                    "bg-success/20 text-success hover:bg-success/30",
+                                  clase.estado === "EN_CURSO" &&
+                                    "bg-info/20 text-info hover:bg-info/30",
+                                  clase.estado === "PROGRAMADA" &&
+                                    "bg-warning/20 text-warning hover:bg-warning/30",
+                                  clase.estado === "CANCELADA" &&
+                                    "bg-destructive/20 text-destructive hover:bg-destructive/30",
+                                  clase.estado === "ACA" &&
+                                    "bg-destructive/20 text-destructive hover:bg-destructive/30",
+                                  clase.estado === "ASA" &&
+                                    "bg-destructive/20 text-destructive hover:bg-destructive/30",
+                                )}
+                              >
+                                <span className="font-medium">
+                                  {clase.hora.slice(0, 5)}
+                                </span>
+                                <span className="ml-1 truncate">
+                                  {
+                                    getAlumnoApellido(clase.alumnoId).split(
+                                      " ",
+                                    )[0]
+                                  }
+                                </span>
+                                <span> /</span>
+                                <span className="ml-1 truncate">
+                                  {
+                                    getCaballoNombre(clase.caballoId).split(
+                                      " ",
+                                    )[0]
+                                  }
+                                </span>
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-0" align="start">
+                              <div className="p-4">
+                                <div className="mb-3 flex items-center justify-between">
+                                  <h4 className="font-display font-semibold">
+                                    Detalles de la Clase
+                                  </h4>
+                                  <StatusBadge
+                                    status={estadoColors[clase.estado]}
+                                  >
+                                    {clase.estado}
+                                  </StatusBadge>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <span>
+                                      {clase.hora
+                                        .split(":")
+                                        .slice(0, 2)
+                                        .join(":")}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span>
+                                      {getAlumnoNombre(clase.alumnoId)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                                    <span>
+                                      {getInstructorNombre(clase.instructorId)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Landmark className="h-4 w-4 text-muted-foreground" />
+                                    <span>
+                                      {getCaballoNombre(clase.caballoId)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span>{clase.especialidad}</span>
+                                  </div>
+                                </div>
+                                <div className="mt-4 border-t border-border pt-4">
+                                  <Label className="mb-2 block text-xs text-muted-foreground">
+                                    Cambiar Estado
+                                  </Label>
+                                  <div className="flex flex-wrap gap-1">
+                                    {(
+                                      [
+                                        "PROGRAMADA",
+                                        "EN_CURSO",
+                                        "COMPLETADA",
+                                        "CANCELADA",
+                                        "ACA",
+                                        "ASA",
+                                      ] as const
+                                    ).map((estado) => (
+                                      <Button
+                                        key={estado}
+                                        variant={
+                                          clase.estado === estado
+                                            ? "default"
+                                            : "outline"
+                                        }
+                                        size="sm"
+                                        className="text-xs"
+                                        onClick={() =>
+                                          handleStatusChange(clase.id, estado)
+                                        }
+                                      >
+                                        {estado}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ))}
+                      {dayClases.length > (viewMode === "week" ? 10 : 3) && (
+                        <span className="block text-center text-xs text-muted-foreground">
+                          +{dayClases.length - (viewMode === "week" ? 10 : 3)}{" "}
+                          más
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Legend */}
@@ -554,98 +861,130 @@ const handleCopySubmit = (e: React.FormEvent<HTMLFormElement>) => {
       </div>
 
       {/* New Class Dialog */}
-<Dialog open={isCreateOpen} onOpenChange={(open) => {
-    setIsCreateOpen(open);
-    if (!open) {
-      setSelectedDate(null);
-      setPrefilledCaballoId(null);
-      setPrefilledHora(null);
-    }
-}}>
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) {
+            setSelectedDate(null);
+            setPrefilledCaballoId(null);
+            setPrefilledHora(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle className="font-display">Nueva Clase</DialogTitle>
               <DialogDescription>
                 {selectedDate && (
-                  <>Programar clase para el {format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: es })}</>
+                  <>
+                    Programar clase para el{" "}
+                    {format(selectedDate, "d 'de' MMMM 'de' yyyy", {
+                      locale: es,
+                    })}
+                  </>
                 )}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="hora ">Hora de Inicio</Label>
-                <Input
-                  id="hora "
-                  name="hora "
-                  type="time"
-                  defaultValue={prefilledHora || "09:00"}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hora">Hora de Inicio</Label>
+                  <Input
+                    id="hora"
+                    name="hora"
+                    type="time"
+                    defaultValue={prefilledHora || "09:00"}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="alumnoId">Alumno</Label>
-                <Select name="alumnoId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar alumno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {alumnos.map((alumno: Alumno) => (
-                      <SelectItem key={alumno.id} value={String(alumno.id)}>
-                        {alumno.nombre} {alumno.apellido}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="instructorId">Instructor</Label>
-                <Select name="instructorId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar instructor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {instructores
-                      .filter((i: Instructor) => i.activo)
-                      .map((instructor: Instructor) => (
-                        <SelectItem key={instructor.id} value={String(instructor.id)}>
-                          {instructor.nombre} {instructor.apellido}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="alumnoId">Alumno</Label>
+                  <Select name="alumnoId" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar alumno" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {alumnos.map((alumno: Alumno) => (
+                        <SelectItem key={alumno.id} value={String(alumno.id)}>
+                          {alumno.nombre} {alumno.apellido}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="caballoId">Caballo</Label>
+                  <Select
+                    name="caballoId"
+                    required
+                    defaultValue={
+                      prefilledCaballoId
+                        ? String(prefilledCaballoId)
+                        : undefined
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar caballo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {caballos
+                        .filter((c: Caballo) => c.disponible)
+                        .map((caballo: Caballo) => (
+                          <SelectItem
+                            key={caballo.id}
+                            value={String(caballo.id)}
+                          >
+                            {caballo.nombre} (
+                            {caballo.tipoCaballo === "ESCUELA"
+                              ? "Escuela"
+                              : "Privado"}
+                            )
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="caballoId">Caballo</Label>
-                <Select name="caballoId" required defaultValue={prefilledCaballoId ? String(prefilledCaballoId) : undefined}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar caballo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {caballos
-                      .filter((c: Caballo) => c.disponible)
-                      .map((caballo: Caballo) => (
-                        <SelectItem key={caballo.id} value={String(caballo.id)}>
-                          {caballo.nombre} ({caballo.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"})
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="instructorId">Instructor</Label>
+                  <Select name="instructorId" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar instructor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {instructores
+                        .filter((i: Instructor) => i.activo)
+                        .map((instructor: Instructor) => (
+                          <SelectItem
+                            key={instructor.id}
+                            value={String(instructor.id)}
+                          >
+                            {instructor.nombre} {instructor.apellido}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="especialidad">Especialidad</Label>
+                  <Select name="especialidad" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar especialidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {especialidad.map((esp) => (
+                        <SelectItem key={esp} value={esp}>
+                          {esp}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="especialidad">Especialidad</Label>
-                <Select name="especialidad" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar especialidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {especialidad.map((esp) => (
-                      <SelectItem key={esp} value={esp}>
-                        {esp}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>

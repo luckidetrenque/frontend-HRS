@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -33,10 +35,88 @@ export default function CaballosPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingCaballo, setEditingCaballo] = useState<Caballo | null>(null);
 
+  // Estados de filtros
+  const [filters, setFilters] = useState({
+    tipoCaballo: "all",
+    disponible: "all",
+  });
+
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const { data: caballos = [], isLoading } = useQuery({
     queryKey: ["caballos"],
     queryFn: caballosApi.listar,
   });
+
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return caballos.filter((caballo: Caballo) => {
+      if (
+        filters.tipoCaballo !== "all" &&
+        caballo.tipoCaballo !== filters.tipoCaballo
+      ) {
+        return false;
+      }
+      if (
+        filters.disponible !== "all" &&
+        String(caballo.disponible) !== filters.disponible
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [caballos, filters]);
+
+  // Paginar datos
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+
+  // Configuración de filtros
+  const filterConfig = [
+    {
+      name: "tipoCaballo",
+      label: "Tipo",
+      type: "select" as const,
+      options: [
+        { label: "Escuela", value: "ESCUELA" },
+        { label: "Privado", value: "PRIVADO" },
+      ],
+    },
+    {
+      name: "disponible",
+      label: "Disponibilidad",
+      type: "select" as const,
+      options: [
+        { label: "Disponible", value: "true" },
+        { label: "No Disponible", value: "false" },
+      ],
+    },
+  ];
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      tipoCaballo: "all",
+      disponible: "all",
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: caballosApi.crear,
@@ -45,7 +125,8 @@ export default function CaballosPage() {
       setIsOpen(false);
       toast.success("Caballo creado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al crear el caballo"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al crear el caballo"),
   });
 
   const updateMutation = useMutation({
@@ -57,7 +138,8 @@ export default function CaballosPage() {
       setEditingCaballo(null);
       toast.success("Caballo actualizado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al actualizar el caballo"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar el caballo"),
   });
 
   const deleteMutation = useMutation({
@@ -66,7 +148,8 @@ export default function CaballosPage() {
       queryClient.invalidateQueries({ queryKey: ["caballos"] });
       toast.success("Caballo eliminado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al eliminar el caballo"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el caballo"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -90,7 +173,9 @@ export default function CaballosPage() {
     {
       header: "Tipo",
       cell: (row: Caballo) => (
-        <StatusBadge status={row.tipoCaballo === "ESCUELA" ? "info" : "warning"}>
+        <StatusBadge
+          status={row.tipoCaballo === "ESCUELA" ? "info" : "warning"}
+        >
           {row.tipoCaballo === "ESCUELA" ? "Escuela" : "Privado"}
         </StatusBadge>
       ),
@@ -168,11 +253,12 @@ export default function CaballosPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="nombre">Nombre</Label>
+                    <Label htmlFor="nombre">Nombre/s</Label>
                     <Input
                       id="nombre"
                       name="nombre"
                       defaultValue={editingCaballo?.nombre}
+                      placeholder="Nombre/s del caballo"
                       required
                     />
                   </div>
@@ -201,7 +287,12 @@ export default function CaballosPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
+                  >
                     {editingCaballo ? "Guardar Cambios" : "Crear Caballo"}
                   </Button>
                 </DialogFooter>
@@ -211,12 +302,32 @@ export default function CaballosPage() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={caballos}
-        isLoading={isLoading}
-        emptyMessage="No hay caballos registrados"
-      />
+      <div className="space-y-4">
+        <FilterBar
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          isLoading={isLoading}
+          emptyMessage="No hay caballos que coincidan con los filtros"
+        />
+
+        {filteredData.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredData.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
+      </div>
     </Layout>
   );
 }

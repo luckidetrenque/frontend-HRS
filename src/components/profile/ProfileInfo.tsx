@@ -1,16 +1,33 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
-import { User, Mail, Calendar, Shield, Edit2, Save, X, Upload, Camera } from 'lucide-react';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  User,
+  Mail,
+  Calendar,
+  Shield,
+  Edit2,
+  Save,
+  X,
+  Upload,
+  Camera,
+  Lock,
+} from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface ProfileInfoProps {
   onUpdate?: (data: { username?: string; email?: string }) => Promise<void>;
@@ -22,12 +39,16 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
   const [editedData, setEditedData] = useState({
-    email: user?.email || '',
-    username: user?.username || '',
+    email: user?.email || "",
+    username: user?.username || "",
+    password: user?.password || "",
+    rol: user?.rol || "",
+    activo: user?.activo || false,
+    fechaCreacion: user?.fechaCreacion || "",
   });
 
   const getInitials = () => {
-    if (!user?.username) return 'U';
+    if (!user?.username) return "U";
     return user.username.slice(0, 2).toUpperCase();
   };
 
@@ -40,17 +61,18 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
       } else {
         // Simulación por defecto si no hay callback
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        
+
         // Actualizar localStorage
         const updatedUser = { ...user, ...editedData };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
       }
 
-      toast.success('Perfil actualizado correctamente');
+      toast.success("Perfil actualizado correctamente");
       setIsEditing(false);
     } catch (error) {
-      toast.error('Error al actualizar el perfil', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo',
+      toast.error("Error al actualizar el perfil", {
+        description:
+          error instanceof Error ? error.message : "Inténtalo de nuevo",
       });
     } finally {
       setIsSaving(false);
@@ -59,15 +81,19 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
 
   const handleCancel = () => {
     setEditedData({
-      email: user?.email || '',
-      username: user?.username || '',
+      email: user?.email || "",
+      username: user?.username || "",
+      password: user?.password || "",
+      rol: user?.rol || "",
+      activo: user?.activo || false,
+      fechaCreacion: user?.fechaCreacion || "",
     });
     setIsEditing(false);
   };
 
   const handleAvatarUpload = () => {
     // Aquí implementarías la lógica de upload
-    toast.info('Función de cambio de avatar próximamente');
+    toast.info("Función de cambio de avatar próximamente");
   };
 
   if (!user) return null;
@@ -89,26 +115,28 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
-              
+
               {/* Overlay de Upload */}
               <button
                 onClick={handleAvatarUpload}
                 className={`absolute inset-0 flex items-center justify-center rounded-full bg-black/60 transition-opacity ${
-                  avatarHover ? 'opacity-100' : 'opacity-0'
+                  avatarHover ? "opacity-100" : "opacity-0"
                 }`}
               >
                 <Camera className="h-6 w-6 text-white" />
               </button>
             </div>
           </div>
-          
-          <CardTitle className="text-xl font-display">{user.username}</CardTitle>
+
+          <CardTitle className="text-xl font-display">
+            {user.username}
+          </CardTitle>
           <CardDescription className="text-sm">{user.email}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
           <Separator />
-          
+
           <div className="space-y-3">
             {/* Rol */}
             <div className="flex items-center justify-between">
@@ -117,7 +145,7 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                 <span>Rol</span>
               </div>
               <Badge variant="outline" className="font-medium">
-                {user.rol || 'Usuario'}
+                {user.rol || "Usuario"}
               </Badge>
             </div>
 
@@ -133,22 +161,6 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                 })}
               </p>
             </div>
-
-            {/* DNI si existe */}
-            {user.personaDni && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Documento de Identidad</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {user.personaTipoDni || 'DNI'}
-                    </span>
-                    <span className="font-mono">{user.personaDni}</span>
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -162,12 +174,16 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                 <CardTitle className="text-lg">Información Personal</CardTitle>
                 <CardDescription>
                   {isEditing
-                    ? 'Edita tus datos y guarda los cambios'
-                    : 'Administra tu información personal'}
+                    ? "Edita tus datos y guarda los cambios"
+                    : "Administra tu información personal"}
                 </CardDescription>
               </div>
               {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
                   <Edit2 className="mr-2 h-4 w-4" />
                   Editar
                 </Button>
@@ -250,39 +266,59 @@ export function ProfileInfo({ onUpdate }: ProfileInfoProps) {
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Información adicional (read-only) */}
-            {(user.personaDni || user.personaTipoDni) && (
-              <>
-                <Separator />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Tipo de Documento
-                    </Label>
-                    <div className="flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2">
-                      <span className="text-sm">{user.personaTipoDni || 'DNI'}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Número de Documento
-                    </Label>
-                    <div className="flex items-center gap-2 rounded-md border border-input bg-muted/30 px-3 py-2">
-                      <span className="font-mono text-sm">{user.personaDni}</span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+              {/* password */}
+              <div className="space-y-2 hidden">
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Contraseña
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="password"
+                    type="password"
+                    value={user.password}
+                    onChange={(e) =>
+                      setEditedData({ ...editedData, password: e.target.value })
+                    }
+                    disabled={isSaving}
+                    className="transition-all"
+                    readOnly
+                  />
+                ) : (
+                  ""
+                )}
+              </div>
+
+              {/* rol */}
+              <div className="space-y-2 hidden">
+                <Label htmlFor="rol" className="text-sm font-medium">
+                  Rol
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="rol"
+                    type="text"
+                    value={user.rol}
+                    onChange={(e) =>
+                      setEditedData({ ...editedData, rol: e.target.value })
+                    }
+                    disabled={isSaving}
+                    className="transition-all"
+                    readOnly
+                  />
+                ) : (
+                  ""
+                )}
+              </div>
+            </div>
 
             {/* Info adicional de solo lectura */}
             {isEditing && (
               <div className="rounded-lg bg-muted/50 p-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Nota:</strong> El rol y fecha de creación no se pueden editar.
-                  Si necesitas cambiar estos datos, contacta al administrador.
+                  <strong>Nota:</strong> El rol y fecha de creación no se pueden
+                  editar. Si necesitas cambiar estos datos, contacta al
+                  administrador.
                 </p>
               </div>
             )}

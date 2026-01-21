@@ -1,3 +1,5 @@
+import { Update } from "vite/types/hmrPayload.js";
+
 const API_BASE_URL = "http://localhost:8080/api/v1/auth";
 
 export interface User {
@@ -6,11 +8,13 @@ export interface User {
   email: string;
   // nombre?: string;
   // apellido?: string;
+  password: string;
   rol?: string;
+  activo: boolean;
   fechaCreacion: string;
-  personaDni?: string;
-  personaTipoDni?: string;
-  avatarUrl: "https://picsum.photos/id/237/200/300";
+  // personaDni?: string;
+  // personaTipoDni?: string;
+  // avatarUrl: "https://picsum.photos/id/237/200/300";
 }
 
 export interface LoginCredentials {
@@ -22,13 +26,29 @@ export interface RegisterData {
   id: number;
   username: string;
   email: string;
+  password: string;
   // nombre?: string;
   // apellido?: string;
   rol?: string;
+  activo: true;
   fechaCreacion: string;
-  personaDni?: string;
-  personaTipoDni?: string;
+  // personaDni?: string;
+  // personaTipoDni?: string;
 }
+
+export interface UpdateData {
+  id: number;
+  username: string;
+  email: string;
+  // nombre?: string;
+  // apellido?: string;
+  rol?: string;
+  activo: boolean
+  fechaCreacion: string;
+  // personaDni?: string;
+  // personaTipoDni?: string;
+}
+
 
 // Codifica credenciales en Base64 para Basic Auth
 export const encodeCredentials = (
@@ -97,6 +117,30 @@ export const register = async (data: RegisterData): Promise<User> => {
   return response.json();
 };
 
+// Actualizar usuario
+export const update = async (data: UpdateData): Promise<User> => {
+  const credentials = getStoredCredentials();
+
+  const response = await fetch(`${API_BASE_URL}/update`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(credentials && { Authorization: `Basic ${credentials}` }),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "Error al actualizar usuario");
+  }
+
+  const updatedUser = await response.json();
+  localStorage.setItem("user", JSON.stringify(updatedUser));
+
+  return updatedUser;
+}
+
 // Logout
 export const logout = async (): Promise<void> => {
   const credentials = getStoredCredentials();
@@ -112,6 +156,33 @@ export const logout = async (): Promise<void> => {
     clearCredentials();
   }
 };
+
+// Update user profile
+export const updateProfile = async (
+  id: number,
+  data: Partial<UpdateData>
+): Promise<User> => {
+  const credentials = getStoredCredentials();
+
+  const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(credentials && { Authorization: `Basic ${credentials}` }),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || "Error al actualizar perfil");
+  }
+
+  const updatedUser = await response.json();
+  localStorage.setItem("user", JSON.stringify(updatedUser));
+
+  return updatedUser;
+}
 
 // Helper para hacer peticiones autenticadas
 export const authenticatedFetch = async (

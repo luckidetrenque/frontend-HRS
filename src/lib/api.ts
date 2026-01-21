@@ -51,6 +51,7 @@ export interface Clase {
   alumnoId: number;
   instructorId: number;
   caballoId: number;
+  diaHoraCompleto?: string;
 }
 
 export interface ClaseDetallada extends Clase {
@@ -252,9 +253,20 @@ export const clasesApi = {
     });
     return handleResponse<Clase>(response);
   },
+
+  // Calendario
   copiarSemana: async (payload?: unknown): Promise<unknown> => {
     const response = await apiFetch(`/calendario/copiar-semana`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+    return handleResponse<unknown>(response);
+  },
+
+    eliminarClases: async (payload?: unknown): Promise<unknown> => {
+    const response = await apiFetch(`/calendario/eliminar-periodo`, {
+      method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: payload ? JSON.stringify(payload) : undefined,
     });

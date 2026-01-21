@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+// import { FloatingWhatsApp } from "@digicroz/react-floating-whatsapp";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -25,18 +28,125 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { alumnosApi, Alumno } from "@/lib/api";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Bot,
+  MessageCircle,
+  MessageCircleMore,
+} from "lucide-react";
 import { toast } from "sonner";
+import { Navigate } from "react-router-dom";
 
 export default function AlumnosPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAlumno, setEditingAlumno] = useState<Alumno | null>(null);
 
+  // Estados de filtros
+  const [filters, setFilters] = useState({
+    cantidadClases: "all",
+    activo: "all",
+    propietario: "all",
+  });
+
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
   const { data: alumnos = [], isLoading } = useQuery({
     queryKey: ["alumnos"],
     queryFn: alumnosApi.listar,
   });
+
+  // const [alumnoActivo, setAlumnoActivo] = useState<Alumno | null>(null);
+
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return alumnos.filter((alumno: Alumno) => {
+      if (
+        filters.cantidadClases !== "all" &&
+        String(alumno.cantidadClases) !== filters.cantidadClases
+      ) {
+        return false;
+      }
+      if (
+        filters.activo !== "all" &&
+        String(alumno.activo) !== filters.activo
+      ) {
+        return false;
+      }
+      if (
+        filters.propietario !== "all" &&
+        String(alumno.propietario) !== filters.propietario
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [alumnos, filters]);
+
+  // Paginar datos
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+
+  // Configuración de filtros
+  const filterConfig = [
+    {
+      name: "cantidadClases",
+      label: "Clases/Mes",
+      type: "select" as const,
+      options: [
+        { label: "4 clases", value: "4" },
+        { label: "8 clases", value: "8" },
+        { label: "12 clases", value: "12" },
+        { label: "16 clases", value: "16" },
+      ],
+    },
+    {
+      name: "activo",
+      label: "Estado",
+      type: "select" as const,
+      options: [
+        { label: "Activo", value: "true" },
+        { label: "Inactivo", value: "false" },
+      ],
+    },
+    {
+      name: "propietario",
+      label: "Propietario",
+      type: "select" as const,
+      options: [
+        { label: "Sí", value: "true" },
+        { label: "No", value: "false" },
+      ],
+    },
+  ];
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1); // Reset a página 1 al filtrar
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      cantidadClases: "all",
+      activo: "all",
+      propietario: "all",
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: alumnosApi.crear,
@@ -45,7 +155,8 @@ export default function AlumnosPage() {
       setIsOpen(false);
       toast.success("Alumno creado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message ||"Error al crear el alumno"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al crear el alumno"),
   });
 
   const updateMutation = useMutation({
@@ -57,7 +168,8 @@ export default function AlumnosPage() {
       setEditingAlumno(null);
       toast.success("Alumno actualizado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message ||"Error al actualizar el alumno"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar el alumno"),
   });
 
   const deleteMutation = useMutation({
@@ -66,7 +178,8 @@ export default function AlumnosPage() {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
       toast.success("Alumno eliminado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al eliminar el alumno"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el alumno"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,12 +189,16 @@ export default function AlumnosPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
-      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string).toISOString().split("T")[0],
+      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
+        .toISOString()
+        .split("T")[0],
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
-      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string).toISOString().split("T")[0],
+      fechaInscripcion: new Date(formData.get("fechaInscripcion") as string)
+        .toISOString()
+        .split("T")[0],
       cantidadClases: Number(formData.get("cantidadClases")),
-      propietario: formData.get("propietario") === "on",
+      propietario: formData.get("propietario") === "off",
       activo: formData.get("activo") === "on",
     };
 
@@ -134,6 +251,39 @@ export default function AlumnosPage() {
       cell: (row: Alumno) => (
         <div className="flex gap-2">
           <Button
+            title={`Enviar mensaje a ${row.nombre} ${row.apellido}`}
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              // location.href = `https://wa.me/549221${row.telefono}`;
+              window.open(
+                encodeURI(
+                  `https://wa.me/${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
+                ),
+                "_blank",
+              );
+              // setAlumnoActivo(row);
+            }}
+          >
+            <MessageCircleMore className="h-4 w-4 text-success" />
+          </Button>
+          {/* {alumnoActivo && (
+            <FloatingWhatsApp
+              phoneNumber={`549221${alumnoActivo.telefono}`}
+              accountName={alumnoActivo.nombre}
+              // avatar={alumnoActivo.avatar}
+              statusMessage="En línea"
+              chatMessage={`Hola 👋, ¿en qué puedo ayudarte, ${alumnoActivo.nombre}?`}
+              placeholder="Escribe un mensaje..."
+              allowClickAway={true} // Cierra al hacer clic fuera
+              notification={true} // Muestra un punto de notificación
+              onClose={() => setAlumnoActivo(null)} // Limpia el estado al cerrar
+            />
+          )} */}
+
+          <Button
+            title={`Editar datos del alumno ${row.nombre} ${row.apellido}`}
             variant="ghost"
             size="icon"
             onClick={(e) => {
@@ -145,6 +295,7 @@ export default function AlumnosPage() {
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
+            title={`Eliminar el alumno ${row.nombre} ${row.apellido}`}
             variant="ghost"
             size="icon"
             onClick={(e) => {
@@ -195,22 +346,24 @@ export default function AlumnosPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre</Label>
+                      <Label htmlFor="nombre">Nombre/s</Label>
                       <Input
                         id="nombre"
                         name="nombre"
                         type="text"
                         defaultValue={editingAlumno?.nombre}
+                        placeholder="Nombre/s del alumno"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="apellido">Apellido</Label>
+                      <Label htmlFor="apellido">Apellido/s</Label>
                       <Input
                         id="apellido"
                         name="apellido"
                         type="text"
                         defaultValue={editingAlumno?.apellido}
+                        placeholder="Apellido/s del alumno"
                         required
                       />
                     </div>
@@ -223,6 +376,7 @@ export default function AlumnosPage() {
                         name="dni"
                         type="number"
                         defaultValue={editingAlumno?.dni}
+                        placeholder="Solo números sin puntos"
                         required
                       />
                     </div>
@@ -245,8 +399,10 @@ export default function AlumnosPage() {
                       <Input
                         id="telefono"
                         name="telefono"
-                        type="number"
+                        type="tel"
                         defaultValue={editingAlumno?.telefono}
+                        placeholder="Sin el 0 ni el 15"
+                        pattern="\+?[0-9]*"
                         required
                       />
                     </div>
@@ -257,6 +413,7 @@ export default function AlumnosPage() {
                         name="email"
                         type="email"
                         defaultValue={editingAlumno?.email}
+                        placeholder="alumno@correo.com"
                       />
                     </div>
                   </div>
@@ -269,7 +426,10 @@ export default function AlumnosPage() {
                         id="fechaInscripcion"
                         name="fechaInscripcion"
                         type="date"
-                        defaultValue={editingAlumno?.fechaInscripcion||new Date().toISOString().split("T")[0]}
+                        defaultValue={
+                          editingAlumno?.fechaInscripcion ||
+                          new Date().toISOString().split("T")[0]
+                        }
                         required
                       />
                     </div>
@@ -278,7 +438,7 @@ export default function AlumnosPage() {
                       <Select
                         name="cantidadClases"
                         defaultValue={String(
-                          editingAlumno?.cantidadClases || 4
+                          editingAlumno?.cantidadClases || 4,
                         )}
                       >
                         <SelectTrigger>
@@ -294,25 +454,24 @@ export default function AlumnosPage() {
                     </div>
                   </div>
 
-                                          <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      id="propietario"
-                      name="propietario"
-                      defaultChecked={editingAlumno?.propietario}
-                    />
-                    <Label htmlFor="propietario">Tiene caballo propio</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="propietario"
+                        name="propietario"
+                        defaultChecked={editingAlumno?.propietario}
+                      />
+                      <Label htmlFor="propietario">Tiene caballo propio</Label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="activo"
+                        name="activo"
+                        defaultChecked={editingAlumno?.activo ?? true}
+                      />
+                      <Label htmlFor="activo">Esta activo</Label>
+                    </div>
                   </div>
-                                    <div className="flex items-center gap-3">
-                    <Switch
-                      id="activo"
-                      name="activo"
-                      defaultChecked={editingAlumno?.activo}
-                    />
-                    <Label htmlFor="activo">Esta activo</Label>
-                  </div>
-                                          </div>
-
                 </div>
                 <DialogFooter>
                   <Button
@@ -330,12 +489,32 @@ export default function AlumnosPage() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={alumnos}
-        isLoading={isLoading}
-        emptyMessage="No hay alumnos registrados"
-      />
+      <div className="space-y-4">
+        <FilterBar
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          isLoading={isLoading}
+          emptyMessage="No hay alumnos que coincidan con los filtros"
+        />
+
+        {filteredData.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredData.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
+      </div>
     </Layout>
   );
 }

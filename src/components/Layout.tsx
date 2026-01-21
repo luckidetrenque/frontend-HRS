@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserDropdown } from "@/components/UserDropdown";
+import {
+  AlumnoIcon,
+  InstructorIcon,
+  CaballoIcon,
+  ClaseIcon,
+  CalendarioIcon,
+} from "@/components/icons";
 
 interface LayoutProps {
   children: ReactNode;
@@ -42,7 +49,9 @@ export function Layout({ children }: LayoutProps) {
               <h1 className="font-display text-xl font-semibold text-foreground">
                 Escuela de Equitación
               </h1>
-              <p className="text-xs text-muted-foreground">Sistema de Gestión</p>
+              <p className="text-xs text-muted-foreground">
+                Sistema de Gestión
+              </p>
             </div>
           </Link>
 
@@ -58,7 +67,7 @@ export function Layout({ children }: LayoutProps) {
                     "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -101,7 +110,7 @@ export function Layout({ children }: LayoutProps) {
                       "flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-all duration-200",
                       isActive
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                     )}
                   >
                     <span className="flex items-center gap-3">

@@ -1,13 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  User, 
-  LoginCredentials, 
-  RegisterData, 
-  login as loginService, 
-  register as registerService, 
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  User,
+  LoginCredentials,
+  RegisterData,
+  login as loginService,
+  register as registerService,
   logout as logoutService,
-  clearCredentials 
-} from '@/services/authService';
+  update as updateService,
+  clearCredentials,
+} from "@/services/authService";
 
 interface AuthContextType {
   user: User | null;
@@ -23,7 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth debe usarse dentro de un AuthProvider');
+    throw new Error("useAuth debe usarse dentro de un AuthProvider");
   }
   return context;
 };
@@ -38,9 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Recuperar usuario de localStorage al cargar
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedCredentials = localStorage.getItem('authCredentials');
-    
+    const storedUser = localStorage.getItem("user");
+    const storedCredentials = localStorage.getItem("authCredentials");
+
     if (storedUser && storedCredentials) {
       try {
         setUser(JSON.parse(storedUser));
@@ -80,6 +87,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const update = async (data: RegisterData): Promise<void> => {
+    setIsLoading(true);
+    try {
+      await registerService(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -89,9 +105,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

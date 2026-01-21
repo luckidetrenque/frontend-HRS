@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +26,75 @@ import { toast } from "sonner";
 export default function InstructoresPage() {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
+  const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(
+    null,
+  );
+
+  // Estados de filtros
+  const [filters, setFilters] = useState({
+    activo: "all",
+  });
+
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data: instructores = [], isLoading } = useQuery({
     queryKey: ["instructores"],
     queryFn: instructoresApi.listar,
   });
+
+  // Filtrar datos
+  const filteredData = useMemo(() => {
+    return instructores.filter((instructor: Instructor) => {
+      if (
+        filters.activo !== "all" &&
+        String(instructor.activo) !== filters.activo
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [instructores, filters]);
+
+  // Paginar datos
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredData.slice(startIndex, endIndex);
+  }, [filteredData, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+
+  // Configuración de filtros
+  const filterConfig = [
+    {
+      name: "activo",
+      label: "Estado",
+      type: "select" as const,
+      options: [
+        { label: "Activo", value: "true" },
+        { label: "Inactivo", value: "false" },
+      ],
+    },
+  ];
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      activo: "all",
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: instructoresApi.crear,
@@ -38,7 +103,8 @@ export default function InstructoresPage() {
       setIsOpen(false);
       toast.success("Instructor creado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al crear el instructor"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al crear el instructor"),
   });
 
   const updateMutation = useMutation({
@@ -50,7 +116,8 @@ export default function InstructoresPage() {
       setEditingInstructor(null);
       toast.success("Instructor actualizado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al actualizar el instructor"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al actualizar el instructor"),
   });
 
   const deleteMutation = useMutation({
@@ -59,7 +126,8 @@ export default function InstructoresPage() {
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
       toast.success("Instructor eliminado correctamente");
     },
-    onError: (error: Error) => toast.error(error.message || "Error al eliminar el instructor"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Error al eliminar el instructor"),
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -69,7 +137,9 @@ export default function InstructoresPage() {
       dni: formData.get("dni") as string,
       nombre: formData.get("nombre") as string,
       apellido: formData.get("apellido") as string,
-      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string).toISOString().split("T")[0],
+      fechaNacimiento: new Date(formData.get("fechaNacimiento") as string)
+        .toISOString()
+        .split("T")[0],
       telefono: formData.get("telefono") as string,
       email: formData.get("email") as string,
       activo: formData.get("activo") === "on",
@@ -153,7 +223,9 @@ export default function InstructoresPage() {
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle className="font-display">
-                    {editingInstructor ? "Editar Instructor" : "Nuevo Instructor"}
+                    {editingInstructor
+                      ? "Editar Instructor"
+                      : "Nuevo Instructor"}
                   </DialogTitle>
                   <DialogDescription>
                     {editingInstructor
@@ -162,22 +234,24 @@ export default function InstructoresPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre</Label>
+                      <Label htmlFor="nombre">Nombre/s</Label>
                       <Input
                         id="nombre"
                         name="nombre"
                         defaultValue={editingInstructor?.nombre}
+                        placeholder="Nombre/s del instructor"
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="apellido">Apellido</Label>
+                      <Label htmlFor="apellido">Apellido/s</Label>
                       <Input
                         id="apellido"
                         name="apellido"
                         defaultValue={editingInstructor?.apellido}
+                        placeholder="Apellido/s del instructor"
                         required
                       />
                     </div>
@@ -190,6 +264,7 @@ export default function InstructoresPage() {
                         name="dni"
                         type="number"
                         defaultValue={editingInstructor?.dni}
+                        placeholder="Solo números sin puntos"
                         required
                       />
                     </div>
@@ -212,8 +287,10 @@ export default function InstructoresPage() {
                       <Input
                         id="telefono"
                         name="telefono"
-                        type="number"
+                        type="tel"
                         defaultValue={editingInstructor?.telefono}
+                        placeholder="Sin el 0 ni el 15"
+                        pattern="\+?[0-9]*"
                         required
                       />
                     </div>
@@ -224,6 +301,7 @@ export default function InstructoresPage() {
                         name="email"
                         type="email"
                         defaultValue={editingInstructor?.email}
+                        placeholder="instructor@correo.com"
                       />
                     </div>
                   </div>
@@ -237,7 +315,12 @@ export default function InstructoresPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      createMutation.isPending || updateMutation.isPending
+                    }
+                  >
                     {editingInstructor ? "Guardar Cambios" : "Crear Instructor"}
                   </Button>
                 </DialogFooter>
@@ -247,12 +330,32 @@ export default function InstructoresPage() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={instructores}
-        isLoading={isLoading}
-        emptyMessage="No hay instructores registrados"
-      />
+      <div className="space-y-4">
+        <FilterBar
+          filters={filterConfig}
+          values={filters}
+          onChange={handleFilterChange}
+          onReset={handleResetFilters}
+        />
+
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          isLoading={isLoading}
+          emptyMessage="No hay instructores que coincidan con los filtros"
+        />
+
+        {filteredData.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredData.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
+      </div>
     </Layout>
   );
 }
