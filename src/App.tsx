@@ -15,6 +15,7 @@ import CaballosPage from "./pages/Caballos";
 import CalendarioPage from "./pages/Calendario";
 import ClasesPage from "./pages/Clases";
 import InstructoresPage from "./pages/Instructores";
+import Reportes from "./pages/Reportes";
 
 const queryClient = new QueryClient();
 
@@ -28,20 +29,70 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route 
-              path="/" 
+            <Route
+              path="/"
               element={
                 <ProtectedRoute>
                   <Index />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route path="/alumnos" element={<ProtectedRoute><AlumnosPage /></ProtectedRoute>} />
-            <Route path="/caballos" element={<ProtectedRoute><CaballosPage /></ProtectedRoute>} />
-            <Route path="/instructores" element={<ProtectedRoute><InstructoresPage /></ProtectedRoute>} />
-            <Route path="/clases" element={<ProtectedRoute><ClasesPage /></ProtectedRoute>} />
-            <Route path="/calendario" element={<ProtectedRoute><CalendarioPage /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route
+              path="/alumnos"
+              element={
+                <ProtectedRoute>
+                  <AlumnosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/caballos"
+              element={
+                <ProtectedRoute>
+                  <CaballosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/instructores"
+              element={
+                <ProtectedRoute>
+                  <InstructoresPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clases"
+              element={
+                <ProtectedRoute>
+                  <ClasesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendario"
+              element={
+                <ProtectedRoute>
+                  <CalendarioPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reportes"
+              element={
+                <ProtectedRoute>
+                  <Reportes />
+                </ProtectedRoute>
+              }
+            />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

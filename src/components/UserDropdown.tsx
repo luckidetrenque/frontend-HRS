@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +18,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { User, LogOut, Settings, Shield, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { User, LogOut, Settings, Shield, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 export function UserDropdown() {
   const { user, logout } = useAuth();
@@ -33,16 +33,17 @@ export function UserDropdown() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    
+
     try {
       await logout();
-      toast.success('Sesión cerrada correctamente', {
-        description: 'Vuelve pronto',
+      toast.success("Sesión cerrada correctamente", {
+        description: "Vuelve pronto",
       });
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
-      toast.error('Error al cerrar sesión', {
-        description: error instanceof Error ? error.message : 'Inténtalo de nuevo',
+      toast.error("Error al cerrar sesión", {
+        description:
+          error instanceof Error ? error.message : "Inténtalo de nuevo",
       });
     } finally {
       setIsLoggingOut(false);
@@ -51,7 +52,7 @@ export function UserDropdown() {
   };
 
   const getInitials = () => {
-    if (!user?.username) return 'U';
+    if (!user?.username) return "U";
     return user.username.slice(0, 2).toUpperCase();
   };
 
@@ -61,8 +62,8 @@ export function UserDropdown() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="relative h-10 w-10 rounded-full transition-transform hover:scale-105"
           >
             <Avatar className="h-10 w-10 border-2 border-background shadow-md">
@@ -73,7 +74,7 @@ export function UserDropdown() {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        
+
         <DropdownMenuContent className="w-72" align="end" forceMount>
           {/* User Info Header */}
           <DropdownMenuLabel className="font-normal">
@@ -85,23 +86,25 @@ export function UserDropdown() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col space-y-1 flex-1">
-                <p className="text-sm font-semibold leading-none">{user.username}</p>
+                <p className="text-sm font-semibold leading-none">
+                  {user.username}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground line-clamp-1">
                   {user.email}
                 </p>
                 <Badge variant="outline" className="w-fit mt-1 text-xs">
                   <Shield className="mr-1 h-3 w-3" />
-                  {user.rol || 'Usuario'}
+                  {user.rol || "Usuario"}
                 </Badge>
               </div>
             </div>
           </DropdownMenuLabel>
-          
+
           <DropdownMenuSeparator />
-          
+
           {/* Menu Items */}
-          <DropdownMenuItem 
-            onClick={() => navigate('/profile')}
+          <DropdownMenuItem
+            onClick={() => navigate("/profile")}
             className="cursor-pointer py-2.5"
           >
             <div className="flex items-center justify-between w-full">
@@ -112,9 +115,9 @@ export function UserDropdown() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </DropdownMenuItem>
-          
-          <DropdownMenuItem 
-            onClick={() => navigate('/profile')}
+
+          <DropdownMenuItem
+            onClick={() => navigate("/profile")}
             className="cursor-pointer py-2.5"
           >
             <div className="flex items-center justify-between w-full">
@@ -125,9 +128,9 @@ export function UserDropdown() {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </div>
           </DropdownMenuItem>
-          
+
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem
             onClick={() => setShowLogoutDialog(true)}
             className="cursor-pointer text-destructive focus:text-destructive py-2.5"
@@ -144,7 +147,8 @@ export function UserDropdown() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
             <AlertDialogDescription>
-              Estás a punto de cerrar tu sesión. Tendrás que iniciar sesión nuevamente para acceder al sistema.
+              Estás a punto de cerrar tu sesión. Tendrás que iniciar sesión
+              nuevamente para acceder al sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

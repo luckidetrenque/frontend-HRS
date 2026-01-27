@@ -231,10 +231,11 @@ export default function ClasesPage() {
 
   const createMutation = useMutation({
     mutationFn: clasesApi.crear,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       setIsOpen(false);
-      toast.success("Clase creada correctamente");
+      const successMsg = data.__successMessage || "Clase creada correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al crear la clase"),
@@ -243,11 +244,13 @@ export default function ClasesPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Clase> }) =>
       clasesApi.actualizar(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
       setIsOpen(false);
       setEditingClase(null);
-      toast.success("Clase actualizada correctamente");
+      const successMsg =
+        data.__successMessage || "Clase actualizada correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar la clase"),
@@ -255,9 +258,11 @@ export default function ClasesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: clasesApi.eliminar,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["clases"] });
-      toast.success("Clase eliminada correctamente");
+      const successMsg =
+        data.__successMessage || "Clase eliminada correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar la clase"),
@@ -271,7 +276,7 @@ export default function ClasesPage() {
       especialidad: formData.get("especialidad") as
         | "ADIESTRAMIENTO"
         | "EQUINOTERAPIA"
-        | "EQUIITACION",
+        | "EQUITACION",
       dia: new Date(formData.get("dia") as string).toISOString().split("T")[0],
       hora: new Date(`1970-01-01T${formData.get("hora") as string}`)
         .toISOString()
@@ -608,6 +613,7 @@ export default function ClasesPage() {
           values={filters}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
+          isLoading={isLoading}
         />
 
         <DataTable

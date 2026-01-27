@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,13 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Eye, EyeOff, Lock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ChangePasswordDialogProps {
   trigger?: React.ReactNode;
@@ -34,18 +34,18 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
     confirm: false,
   });
   const [formData, setFormData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Calcular fuerza de la contraseña
   const calculatePasswordStrength = (password: string): PasswordStrength => {
-    if (!password) return { score: 0, message: '', color: '' };
-    
+    if (!password) return { score: 0, message: "", color: "" };
+
     let score = 0;
-    
+
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
@@ -53,12 +53,12 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
     if (/[^a-zA-Z0-9]/.test(password)) score++;
 
     const strengths = [
-      { score: 0, message: '', color: '' },
-      { score: 1, message: 'Muy débil', color: 'bg-destructive' },
-      { score: 2, message: 'Débil', color: 'bg-orange-500' },
-      { score: 3, message: 'Regular', color: 'bg-yellow-500' },
-      { score: 4, message: 'Buena', color: 'bg-blue-500' },
-      { score: 5, message: 'Excelente', color: 'bg-green-500' },
+      { score: 0, message: "", color: "" },
+      { score: 1, message: "Muy débil", color: "bg-destructive" },
+      { score: 2, message: "Débil", color: "bg-orange-500" },
+      { score: 3, message: "Regular", color: "bg-yellow-500" },
+      { score: 4, message: "Buena", color: "bg-blue-500" },
+      { score: 5, message: "Excelente", color: "bg-green-500" },
     ];
 
     return strengths[Math.min(score, 5)];
@@ -71,21 +71,22 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
     const newErrors: Record<string, string> = {};
 
     if (!formData.currentPassword) {
-      newErrors.currentPassword = 'La contraseña actual es requerida';
+      newErrors.currentPassword = "La contraseña actual es requerida";
     }
 
     if (!formData.newPassword) {
-      newErrors.newPassword = 'La nueva contraseña es requerida';
+      newErrors.newPassword = "La nueva contraseña es requerida";
     } else if (formData.newPassword.length < 8) {
-      newErrors.newPassword = 'La contraseña debe tener al menos 8 caracteres';
+      newErrors.newPassword = "La contraseña debe tener al menos 8 caracteres";
     } else if (formData.newPassword === formData.currentPassword) {
-      newErrors.newPassword = 'La nueva contraseña debe ser diferente a la actual';
+      newErrors.newPassword =
+        "La nueva contraseña debe ser diferente a la actual";
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Confirma tu nueva contraseña';
+      newErrors.confirmPassword = "Confirma tu nueva contraseña";
     } else if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
     }
 
     setErrors(newErrors);
@@ -109,22 +110,24 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
       // Simulación de llamada a API
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast.success('Contraseña cambiada correctamente', {
-        description: 'Tu contraseña ha sido actualizada exitosamente',
+      toast.success("Contraseña cambiada correctamente", {
+        description: "Tu contraseña ha sido actualizada exitosamente",
       });
 
       // Limpiar formulario y cerrar
       setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
       setErrors({});
       setOpen(false);
     } catch (error) {
-      toast.error('Error al cambiar la contraseña', {
+      toast.error("Error al cambiar la contraseña", {
         description:
-          error instanceof Error ? error.message : 'Verifica tu contraseña actual',
+          error instanceof Error
+            ? error.message
+            : "Verifica tu contraseña actual",
       });
     } finally {
       setIsSubmitting(false);
@@ -133,9 +136,9 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
 
   const handleCancel = () => {
     setFormData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
     setErrors({});
     setOpen(false);
@@ -174,22 +177,25 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
               <div className="relative">
                 <Input
                   id="currentPassword"
-                  type={showPasswords.current ? 'text' : 'password'}
+                  type={showPasswords.current ? "text" : "password"}
                   placeholder="Ingresa tu contraseña actual"
                   value={formData.currentPassword}
                   onChange={(e) => {
-                    setFormData({ ...formData, currentPassword: e.target.value });
-                    setErrors({ ...errors, currentPassword: '' });
+                    setFormData({
+                      ...formData,
+                      currentPassword: e.target.value,
+                    });
+                    setErrors({ ...errors, currentPassword: "" });
                   }}
                   disabled={isSubmitting}
-                  className={errors.currentPassword ? 'border-destructive' : ''}
+                  className={errors.currentPassword ? "border-destructive" : ""}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => togglePasswordVisibility('current')}
+                  onClick={() => togglePasswordVisibility("current")}
                   tabIndex={-1}
                 >
                   {showPasswords.current ? (
@@ -200,7 +206,9 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
                 </Button>
               </div>
               {errors.currentPassword && (
-                <p className="text-sm text-destructive">{errors.currentPassword}</p>
+                <p className="text-sm text-destructive">
+                  {errors.currentPassword}
+                </p>
               )}
             </div>
 
@@ -210,22 +218,22 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
               <div className="relative">
                 <Input
                   id="newPassword"
-                  type={showPasswords.new ? 'text' : 'password'}
+                  type={showPasswords.new ? "text" : "password"}
                   placeholder="Ingresa tu nueva contraseña"
                   value={formData.newPassword}
                   onChange={(e) => {
                     setFormData({ ...formData, newPassword: e.target.value });
-                    setErrors({ ...errors, newPassword: '' });
+                    setErrors({ ...errors, newPassword: "" });
                   }}
                   disabled={isSubmitting}
-                  className={errors.newPassword ? 'border-destructive' : ''}
+                  className={errors.newPassword ? "border-destructive" : ""}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => togglePasswordVisibility('new')}
+                  onClick={() => togglePasswordVisibility("new")}
                   tabIndex={-1}
                 >
                   {showPasswords.new ? (
@@ -249,13 +257,16 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
                         className={`h-1.5 flex-1 rounded-full transition-all ${
                           level <= passwordStrength.score
                             ? passwordStrength.color
-                            : 'bg-muted'
+                            : "bg-muted"
                         }`}
                       />
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Seguridad: <span className="font-medium">{passwordStrength.message}</span>
+                    Seguridad:{" "}
+                    <span className="font-medium">
+                      {passwordStrength.message}
+                    </span>
                   </p>
                 </div>
               )}
@@ -263,26 +274,31 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
 
             {/* Confirmar Contraseña */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
+              <Label htmlFor="confirmPassword">
+                Confirmar Nueva Contraseña
+              </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
-                  type={showPasswords.confirm ? 'text' : 'password'}
+                  type={showPasswords.confirm ? "text" : "password"}
                   placeholder="Confirma tu nueva contraseña"
                   value={formData.confirmPassword}
                   onChange={(e) => {
-                    setFormData({ ...formData, confirmPassword: e.target.value });
-                    setErrors({ ...errors, confirmPassword: '' });
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    });
+                    setErrors({ ...errors, confirmPassword: "" });
                   }}
                   disabled={isSubmitting}
-                  className={errors.confirmPassword ? 'border-destructive' : ''}
+                  className={errors.confirmPassword ? "border-destructive" : ""}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => togglePasswordVisibility('confirm')}
+                  onClick={() => togglePasswordVisibility("confirm")}
                   tabIndex={-1}
                 >
                   {showPasswords.confirm ? (
@@ -293,7 +309,9 @@ export function ChangePasswordDialog({ trigger }: ChangePasswordDialogProps) {
                 </Button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                <p className="text-sm text-destructive">
+                  {errors.confirmPassword}
+                </p>
               )}
             </div>
 

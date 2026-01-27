@@ -1,6 +1,20 @@
 import { Link } from "react-router-dom";
-import { Users, UserCheck, Landmark, CalendarDays, Calendar, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Users,
+  UserCheck,
+  Landmark,
+  CalendarDays,
+  Calendar,
+  ArrowRight,
+  BarChart,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Layout } from "@/components/Layout";
 
 const modules = [
@@ -39,6 +53,13 @@ const modules = [
     href: "/calendario",
     color: "bg-primary",
   },
+  {
+    title: "Reportes",
+    description: "Estadísticas y análisis de la escuela",
+    icon: BarChart,
+    href: "/reportes",
+    color: "bg-warning",
+  },
 ];
 
 const Index = () => {
@@ -71,7 +92,9 @@ const Index = () => {
                 >
                   <module.icon className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <CardTitle className="font-display text-xl">{module.title}</CardTitle>
+                <CardTitle className="font-display text-xl">
+                  {module.title}
+                </CardTitle>
                 <CardDescription>{module.description}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -86,7 +109,10 @@ const Index = () => {
       </div>
 
       {/* Info Banner */}
-      <div className="mt-12 rounded-2xl bg-secondary/50 p-6 md:p-8 animate-fade-in" style={{ animationDelay: "400ms" }}>
+      <div
+        className="mt-12 rounded-2xl bg-secondary/50 p-6 md:p-8 animate-fade-in"
+        style={{ animationDelay: "400ms" }}
+      >
         <div className="flex flex-col items-center gap-4 text-center md:flex-row md:text-left">
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-primary">
             <Landmark className="h-8 w-8 text-primary-foreground" />
@@ -96,8 +122,8 @@ const Index = () => {
               API REST Spring Boot
             </h2>
             <p className="mt-1 text-muted-foreground">
-              Este frontend está conectado a una API REST desarrollada en Java Spring Boot.
-              Asegúrate de que el servidor esté ejecutándose en{" "}
+              Este frontend está conectado a una API REST desarrollada en Java
+              Spring Boot. Asegúrate de que el servidor esté ejecutándose en{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
                 http://localhost:5173
               </code>

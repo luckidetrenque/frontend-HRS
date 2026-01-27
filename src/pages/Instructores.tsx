@@ -98,10 +98,12 @@ export default function InstructoresPage() {
 
   const createMutation = useMutation({
     mutationFn: instructoresApi.crear,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
       setIsOpen(false);
-      toast.success("Instructor creado correctamente");
+      const successMsg =
+        data.__successMessage || "Instructor creado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al crear el instructor"),
@@ -110,11 +112,13 @@ export default function InstructoresPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Instructor> }) =>
       instructoresApi.actualizar(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
       setIsOpen(false);
       setEditingInstructor(null);
-      toast.success("Instructor actualizado correctamente");
+      const successMsg =
+        data.__successMessage || "Instructor actualizado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar el instructor"),
@@ -122,9 +126,11 @@ export default function InstructoresPage() {
 
   const deleteMutation = useMutation({
     mutationFn: instructoresApi.eliminar,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["instructores"] });
-      toast.success("Instructor eliminado correctamente");
+      const successMsg =
+        data.__successMessage || "Instructor eliminado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar el instructor"),
@@ -262,7 +268,7 @@ export default function InstructoresPage() {
                       <Input
                         id="dni"
                         name="dni"
-                        type="number"
+                        type="string"
                         defaultValue={editingInstructor?.dni}
                         placeholder="Solo números sin puntos"
                         required
@@ -336,6 +342,7 @@ export default function InstructoresPage() {
           values={filters}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
+          isLoading={isLoading}
         />
 
         <DataTable

@@ -29,6 +29,7 @@ interface FilterBarProps {
   onChange: (name: string, value: string) => void;
   onReset: () => void;
   defaultOpen?: boolean;
+  isLoading?: boolean;
 }
 
 export function FilterBar({
@@ -37,6 +38,7 @@ export function FilterBar({
   onChange,
   onReset,
   defaultOpen = false,
+  isLoading = false,
 }: FilterBarProps) {
   const hasActiveFilters = Object.values(values).some(
     (v) => v !== "all" && v !== "",
@@ -90,7 +92,13 @@ export function FilterBar({
           </svg>
         </div>
       </summary>
-
+      {isLoading && (
+        <div className="p-4">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm">Aplicando filtros...</span>
+          </div>
+        </div>
+      )}
       <div className="border-t border-border p-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filters.map((filter) => (

@@ -40,7 +40,7 @@ export default function AlumnosPage() {
   const [searchFilters, setSearchFilters] = useState<AlumnoSearchFilters>({});
   const [isSearchActive, setIsSearchActive] = useState(false);
 
-  // Estados de filtros
+  // Estados de filtros tradicionales (opcional - puedes mantenerlos o quitarlos)
   const [filters, setFilters] = useState({
     cantidadClases: "all",
     activo: "all",
@@ -97,7 +97,7 @@ export default function AlumnosPage() {
     setCurrentPage(1); // Reset a página 1 al buscar
   };
 
-  // Filtrar datos
+  // Filtrar datos con filtros tradicionales (si los mantienes)
   const filteredData = useMemo(() => {
     return alumnos.filter((alumno: Alumno) => {
       if (
@@ -131,47 +131,15 @@ export default function AlumnosPage() {
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
 
-  // Configuración de filtros
-  const filterConfig = [
-    {
-      name: "cantidadClases",
-      label: "Clases/Mes",
-      type: "select" as const,
-      options: [
-        { label: "4 clases", value: "4" },
-        { label: "8 clases", value: "8" },
-        { label: "12 clases", value: "12" },
-        { label: "16 clases", value: "16" },
-      ],
-    },
-    {
-      name: "activo",
-      label: "Estado",
-      type: "select" as const,
-      options: [
-        { label: "Activo", value: "true" },
-        { label: "Inactivo", value: "false" },
-      ],
-    },
-    {
-      name: "propietario",
-      label: "Propietario",
-      type: "select" as const,
-      options: [
-        { label: "Sí", value: "true" },
-        { label: "No", value: "false" },
-      ],
-    },
-  ];
+  // ... (resto de configuraciones: filterConfig, mutations, etc.) ...
 
   const createMutation = useMutation({
     mutationFn: alumnosApi.crear,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
       queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
       setIsOpen(false);
-      const successMsg = data.__successMessage || "Alumno creado correctamente";
-      toast.success(successMsg);
+      toast.success("Alumno creado correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al crear el alumno"),
@@ -180,14 +148,12 @@ export default function AlumnosPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Alumno> }) =>
       alumnosApi.actualizar(id, data),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
       queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
       setIsOpen(false);
       setEditingAlumno(null);
-      const successMsg =
-        data.__successMessage || "Alumno actualizado correctamente";
-      toast.success(successMsg);
+      toast.success("Alumno actualizado correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar el alumno"),
@@ -195,16 +161,16 @@ export default function AlumnosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: alumnosApi.eliminar,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alumnos"] });
       queryClient.invalidateQueries({ queryKey: ["alumnos-search"] });
-      const successMsg =
-        data.__successMessage || "Alumno eliminado correctamente";
-      toast.success(successMsg);
+      toast.success("Alumno eliminado correctamente");
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar el alumno"),
   });
+
+  // ... (handleSubmit, columns, etc. - mantener igual) ...
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -225,6 +191,8 @@ export default function AlumnosPage() {
     setPageSize(size);
     setCurrentPage(1);
   };
+
+  // ... (resto de handlers y configuraciones) ...
 
   const columns = [
     {
@@ -273,32 +241,16 @@ export default function AlumnosPage() {
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              // location.href = `https://wa.me/549221${row.telefono}`;
               window.open(
                 encodeURI(
                   `https://wa.me/${row.telefono}?text=Hola ${row.nombre}, te contactamos desde la Escuela para avisarte que... `,
                 ),
                 "_blank",
               );
-              // setAlumnoActivo(row);
             }}
           >
             <MessageCircleMore className="h-4 w-4 text-success" />
           </Button>
-          {/* {alumnoActivo && (
-            <FloatingWhatsApp
-              phoneNumber={`549221${alumnoActivo.telefono}`}
-              accountName={alumnoActivo.nombre}
-              // avatar={alumnoActivo.avatar}
-              statusMessage="En línea"
-              chatMessage={`Hola 👋, ¿en qué puedo ayudarte, ${alumnoActivo.nombre}?`}
-              placeholder="Escribe un mensaje..."
-              allowClickAway={true} // Cierra al hacer clic fuera
-              notification={true} // Muestra un punto de notificación
-              onClose={() => setAlumnoActivo(null)} // Limpia el estado al cerrar
-            />
-          )} */}
-
           <Button
             title={`Editar datos del alumno ${row.nombre} ${row.apellido}`}
             variant="ghost"
@@ -308,8 +260,6 @@ export default function AlumnosPage() {
               setEditingAlumno(row);
               setIsOpen(true);
             }}
-            // label={`Editar datos de ${row.nombre} ${row.apellido}`}
-            // {showLabel && <span>{label}</span>}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -328,6 +278,38 @@ export default function AlumnosPage() {
           </Button>
         </div>
       ),
+    },
+  ];
+
+  const filterConfig = [
+    {
+      name: "cantidadClases",
+      label: "Clases/Mes",
+      type: "select" as const,
+      options: [
+        { label: "4 clases", value: "4" },
+        { label: "8 clases", value: "8" },
+        { label: "12 clases", value: "12" },
+        { label: "16 clases", value: "16" },
+      ],
+    },
+    {
+      name: "activo",
+      label: "Estado",
+      type: "select" as const,
+      options: [
+        { label: "Activo", value: "true" },
+        { label: "Inactivo", value: "false" },
+      ],
+    },
+    {
+      name: "propietario",
+      label: "Propietario",
+      type: "select" as const,
+      options: [
+        { label: "Sí", value: "true" },
+        { label: "No", value: "false" },
+      ],
     },
   ];
 
@@ -420,7 +402,7 @@ export default function AlumnosPage() {
                       <Input
                         id="dni"
                         name="dni"
-                        type="string"
+                        type="number"
                         defaultValue={editingAlumno?.dni}
                         placeholder="Solo números sin puntos"
                         required
@@ -558,7 +540,6 @@ export default function AlumnosPage() {
           values={filters}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
-          isLoading={isLoading}
         />
 
         <DataTable

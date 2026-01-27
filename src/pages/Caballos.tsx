@@ -120,10 +120,12 @@ export default function CaballosPage() {
 
   const createMutation = useMutation({
     mutationFn: caballosApi.crear,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["caballos"] });
       setIsOpen(false);
-      toast.success("Caballo creado correctamente");
+      const successMsg =
+        data.__successMessage || "Caballo creado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al crear el caballo"),
@@ -132,11 +134,13 @@ export default function CaballosPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Caballo> }) =>
       caballosApi.actualizar(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["caballos"] });
       setIsOpen(false);
       setEditingCaballo(null);
-      toast.success("Caballo actualizado correctamente");
+      const successMsg =
+        data.__successMessage || "Caballo actualizado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al actualizar el caballo"),
@@ -144,9 +148,11 @@ export default function CaballosPage() {
 
   const deleteMutation = useMutation({
     mutationFn: caballosApi.eliminar,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["caballos"] });
-      toast.success("Caballo eliminado correctamente");
+      const successMsg =
+        data.__successMessage || "Caballo eliminado correctamente";
+      toast.success(successMsg);
     },
     onError: (error: Error) =>
       toast.error(error.message || "Error al eliminar el caballo"),
@@ -308,6 +314,7 @@ export default function CaballosPage() {
           values={filters}
           onChange={handleFilterChange}
           onReset={handleResetFilters}
+          isLoading={isLoading}
         />
 
         <DataTable

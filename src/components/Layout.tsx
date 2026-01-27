@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  BarChart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserDropdown } from "@/components/UserDropdown";
@@ -30,6 +31,7 @@ const navigation = [
   { name: "Caballos", href: "/caballos", icon: Landmark },
   { name: "Clases", href: "/clases", icon: CalendarDays },
   { name: "Calendario", href: "/calendario", icon: CalendarDays },
+  { name: "Reportes", href: "/reportes", icon: BarChart },
 ];
 
 export function Layout({ children }: LayoutProps) {

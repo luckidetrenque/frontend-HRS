@@ -37,11 +37,11 @@ export interface Caballo {
 
 export interface Clase {
   id: number;
-  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION";
+  especialidad: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUITACION";
   dia: string;
   hora: string;
   estado:
-      "PROGRAMADA"
+    | "PROGRAMADA"
     | "EN_CURSO"
     | "COMPLETADA"
     | "CANCELADA"
@@ -60,17 +60,65 @@ export interface ClaseDetallada extends Clase {
   caballo?: Caballo;
 }
 
+export interface AlumnoSearchFilters {
+  nombre?: string;
+  apellido?: string;
+  activo?: boolean;
+  propietario?: boolean;
+  fechaInscripcion?: string;
+  fechaNacimiento?: string;
+}
+
+export interface InstructorSearchFilters {
+  nombre?: string;
+  apellido?: string;
+  activo?: boolean;
+  fechaNacimiento?: string;
+}
+
+export interface CaballoSearchFilters {
+  nombre?: string;
+  tipoCaballo?: "ESCUELA" | "PRIVADO";
+  disponible?: boolean;
+}
+
+export interface ClaseSearchFilters {
+  dia?: string;
+  hora?: string;
+  alumnoId?: number;
+  instructorId?: number;
+  caballoId?: number;
+  especialidad?: "ADIESTRAMIENTO" | "EQUINOTERAPIA" | "EQUIITACION";
+  estado?:
+    | "PROGRAMADA"
+    | "EN_CURSO"
+    | "COMPLETADA"
+    | "CANCELADA"
+    | "ACA"
+    | "ASA";
+}
+
+// Tipo para respuestas de búsqueda que pueden tener mensaje
+interface SearchResponse<T> {
+  mensaje?: string;
+  alumnos?: T[];
+  instructores?: T[];
+  caballos?: T[];
+  clases?: T[];
+}
+
+// Helper function to make API requests with authentication
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  const credentials = localStorage.getItem('authCredentials');
+  const credentials = localStorage.getItem("authCredentials");
 
   // Definimos los headers usando el tipo Record para evitar el 'any'
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>), // Mantenemos headers existentes si los hay
   };
 
   if (credentials) {
-    headers['Authorization'] = `Basic ${credentials}`;
+    headers["Authorization"] = `Basic ${credentials}`;
   }
 
   return fetch(`${API_BASE_URL}${endpoint}`, {
@@ -82,33 +130,45 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
 // API Functions
 async function handleResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
-    // Opcional: Manejo automático de sesión expirada
-    localStorage.removeItem('authCredentials');
-    localStorage.removeItem('user');
-    window.location.href = '/login'; 
+    localStorage.removeItem("authCredentials");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
     throw new Error("Sesión no autorizada");
   }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const errorMessage = errorData.mensaje || errorData.error || `Error ${response.status}`;
+    const errorMessage =
+      errorData.mensaje || errorData.error || `Error ${response.status}`;
     throw new Error(errorMessage);
   }
-  
-  return response.json() as Promise<T>;
+
+  // Parse response data
+  const data = await response.json();
+
+  const result = data as T & { __successMessage?: string };
+
+  // Attach success message if present (para poder accederlo después)
+  if (data.mensaje || data.message) {
+    result.__successMessage = data.mensaje || data.message;
+  }
+
+  return result;
 }
 
 // Alumnos
 export const alumnosApi = {
   listar: async (): Promise<Alumno[]> => {
-    const response = await apiFetch('/alumnos');
+    const response = await apiFetch("/alumnos");
     return handleResponse<Alumno[]>(response);
   },
   obtener: async (id: number): Promise<Alumno> => {
     const response = await apiFetch(`/alumnos/${id}`);
     return handleResponse<Alumno>(response);
   },
-  crear: async (alumno: Omit<Alumno, "id">): Promise<Alumno> => {
+  crear: async (
+    alumno: Omit<Alumno, "id">,
+  ): Promise<Alumno & { __successMessage?: string }> => {
     const response = await apiFetch(`/alumnos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,7 +176,10 @@ export const alumnosApi = {
     });
     return handleResponse<Alumno>(response);
   },
-  actualizar: async (id: number, alumno: Partial<Alumno>): Promise<Alumno> => {
+  actualizar: async (
+    id: number,
+    alumno: Partial<Alumno>,
+  ): Promise<Alumno & { __successMessage?: string }> => {
     const response = await apiFetch(`/alumnos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -124,25 +187,48 @@ export const alumnosApi = {
     });
     return handleResponse<Alumno>(response);
   },
-  eliminar: async (id: number): Promise<void> => {
+  eliminar: async (
+    id: number,
+  ): Promise<void & { __successMessage?: string }> => {
     const response = await apiFetch(`/alumnos/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
+  },
+  buscar: async (filters: AlumnoSearchFilters): Promise<Alumno[]> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiFetch(`/alumnos/buscar?${params.toString()}`);
+    const data = await handleResponse<Alumno[] | SearchResponse<Alumno>>(
+      response,
+    );
+
+    // Si el backend devuelve un objeto con mensaje y alumnos
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.alumnos || [];
   },
 };
 
 // Instructores
 export const instructoresApi = {
   listar: async (): Promise<Instructor[]> => {
-    const response = await apiFetch('/instructores');
+    const response = await apiFetch("/instructores");
     return handleResponse<Instructor[]>(response);
   },
   obtener: async (id: number): Promise<Instructor> => {
     const response = await apiFetch(`/instructores/${id}`);
     return handleResponse<Instructor>(response);
   },
-  crear: async (instructor: Omit<Instructor, "id">): Promise<Instructor> => {
+  crear: async (
+    instructor: Omit<Instructor, "id">,
+  ): Promise<Instructor & { __successMessage?: string }> => {
     const response = await apiFetch(`/instructores`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,8 +238,8 @@ export const instructoresApi = {
   },
   actualizar: async (
     id: number,
-    instructor: Partial<Instructor>
-  ): Promise<Instructor> => {
+    instructor: Partial<Instructor>,
+  ): Promise<Instructor & { __successMessage?: string }> => {
     const response = await apiFetch(`/instructores/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -161,25 +247,49 @@ export const instructoresApi = {
     });
     return handleResponse<Instructor>(response);
   },
-  eliminar: async (id: number): Promise<void> => {
+  eliminar: async (
+    id: number,
+  ): Promise<void & { __successMessage?: string }> => {
     const response = await apiFetch(`/instructores/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
+  },
+  buscar: async (filters: InstructorSearchFilters): Promise<Instructor[]> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiFetch(
+      `/instructores/buscar?${params.toString()}`,
+    );
+    const data = await handleResponse<
+      Instructor[] | SearchResponse<Instructor>
+    >(response);
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.instructores || [];
   },
 };
 
 // Caballos
 export const caballosApi = {
   listar: async (): Promise<Caballo[]> => {
-    const response = await apiFetch('/caballos');
+    const response = await apiFetch("/caballos");
     return handleResponse<Caballo[]>(response);
   },
   obtener: async (id: number): Promise<Caballo> => {
     const response = await apiFetch(`/caballos/${id}`);
     return handleResponse<Caballo>(response);
   },
-  crear: async (caballo: Omit<Caballo, "id">): Promise<Caballo> => {
+  crear: async (
+    caballo: Omit<Caballo, "id">,
+  ): Promise<Caballo & { __successMessage?: string }> => {
     const response = await apiFetch(`/caballos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -189,8 +299,8 @@ export const caballosApi = {
   },
   actualizar: async (
     id: number,
-    caballo: Partial<Caballo>
-  ): Promise<Caballo> => {
+    caballo: Partial<Caballo>,
+  ): Promise<Caballo & { __successMessage?: string }> => {
     const response = await apiFetch(`/caballos/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -198,29 +308,53 @@ export const caballosApi = {
     });
     return handleResponse<Caballo>(response);
   },
-  eliminar: async (id: number): Promise<void> => {
+  eliminar: async (
+    id: number,
+  ): Promise<void & { __successMessage?: string }> => {
     const response = await apiFetch(`/caballos/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
+  },
+  buscar: async (filters: CaballoSearchFilters): Promise<Caballo[]> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiFetch(`/caballos/buscar?${params.toString()}`);
+    const data = await handleResponse<Caballo[] | SearchResponse<Caballo>>(
+      response,
+    );
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.caballos || [];
   },
 };
 
 // Clases
 export const clasesApi = {
   listar: async (): Promise<Clase[]> => {
-    const response = await apiFetch('/clases');
+    const response = await apiFetch("/clases");
     return handleResponse<Clase[]>(response);
   },
   listarDetalladas: async (): Promise<ClaseDetallada[]> => {
     const response = await apiFetch(`/clases/detalles`);
     return handleResponse<ClaseDetallada[]>(response);
   },
-  obtener: async (id: number): Promise<Clase> => {
+  obtener: async (
+    id: number,
+  ): Promise<Clase & { __successMessage?: string }> => {
     const response = await apiFetch(`/clases/${id}`);
     return handleResponse<Clase>(response);
   },
-  crear: async (clase: Omit<Clase, "id">): Promise<Clase> => {
+  crear: async (
+    clase: Omit<Clase, "id">,
+  ): Promise<Clase & { __successMessage?: string }> => {
     const response = await apiFetch(`/clases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -228,7 +362,10 @@ export const clasesApi = {
     });
     return handleResponse<Clase>(response);
   },
-  actualizar: async (id: number, clase: Partial<Clase>): Promise<Clase> => {
+  actualizar: async (
+    id: number,
+    clase: Partial<Clase>,
+  ): Promise<Clase & { __successMessage?: string }> => {
     const response = await apiFetch(`/clases/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -236,15 +373,35 @@ export const clasesApi = {
     });
     return handleResponse<Clase>(response);
   },
-  eliminar: async (id: number): Promise<void> => {
+  eliminar: async (
+    id: number,
+  ): Promise<void & { __successMessage?: string }> => {
     const response = await apiFetch(`/clases/${id}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Error al eliminar");
   },
+  buscar: async (filters: ClaseSearchFilters): Promise<Clase[]> => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiFetch(`/clases/buscar?${params.toString()}`);
+    const data = await handleResponse<Clase[] | SearchResponse<Clase>>(
+      response,
+    );
+
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.clases || [];
+  },
   cambiarEstado: async (
     id: number,
-    estado: Clase["estado"]
+    estado: Clase["estado"],
   ): Promise<Clase> => {
     const response = await apiFetch(`/clases/${id}/estado`, {
       method: "PATCH",
@@ -255,7 +412,9 @@ export const clasesApi = {
   },
 
   // Calendario
-  copiarSemana: async (payload?: unknown): Promise<unknown> => {
+  copiarSemana: async (
+    payload?: unknown,
+  ): Promise<unknown & { __successMessage?: string }> => {
     const response = await apiFetch(`/calendario/copiar-semana`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -264,7 +423,9 @@ export const clasesApi = {
     return handleResponse<unknown>(response);
   },
 
-    eliminarClases: async (payload?: unknown): Promise<unknown> => {
+  eliminarClases: async (
+    payload?: unknown,
+  ): Promise<unknown & { __successMessage?: string }> => {
     const response = await apiFetch(`/calendario/eliminar-periodo`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
